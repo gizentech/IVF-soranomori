@@ -8,7 +8,7 @@
 .header {
   text-align: center;
   padding: 60px 20px 40px;
-  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
   color: white;
   position: relative;
   overflow: hidden;
@@ -109,10 +109,11 @@
   transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.section h2, .messageSection h2 {
+.section h2,
+.messageSection h2 {
   font-size: 22px;
   margin-bottom: 20px;
-  color: #28a745;
+  color: var(--primary-color);
   font-weight: 700;
   position: relative;
   z-index: 2;
@@ -120,11 +121,12 @@
   align-items: center;
 }
 
-.section h2::after, .messageSection h2::after {
+.section h2::after,
+.messageSection h2::after {
   content: '';
   flex: 1;
   height: 2px;
-  background: linear-gradient(90deg, #20c997 0%, transparent 100%);
+  background: linear-gradient(90deg, var(--accent-color) 0%, transparent 100%);
   margin-left: 20px;
 }
 
@@ -137,79 +139,71 @@
 }
 
 .ticketContainer {
-  margin-bottom: 25px;
-  padding: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  display: flex;
+  justify-content: center;
   position: relative;
   z-index: 2;
 }
 
 .ticket {
-  border: 3px dashed #28a745;
-  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(10px);
+  border-radius: 16px;
   padding: 30px;
-  text-align: center;
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(5px);
+  box-shadow: 0 8px 32px rgba(0, 16, 77, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  max-width: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+  align-items: center;
+  transition: all 0.3s ease;
+}
+
+.ticket:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(0, 16, 77, 0.2);
 }
 
 .ticketInfo {
   text-align: left;
-  margin-bottom: 25px;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  padding: 20px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  width: 100%;
 }
 
 .ticketInfo p {
-  margin: 0 0 12px 0;
-  font-size: 14px;
+  font-size: 16px;
+  margin-bottom: 12px;
+  color: #333;
+  font-weight: 500;
   display: flex;
   align-items: center;
-  line-height: 1.6;
-  color: #495057;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(0, 16, 77, 0.1);
 }
 
 .ticketInfo p:last-child {
-  margin-bottom: 0;
+  border-bottom: none;
 }
 
 .ticketInfo strong {
-  min-width: 90px;
-  color: #28a745;
-  font-weight: 700;
-  position: relative;
-}
-
-.ticketInfo strong::after {
-  content: '';
-  position: absolute;
-  right: -5px;
-  top: 50%;
-  transform: translateY(-50%);
-  width: 2px;
-  height: 12px;
-  background: #20c997;
+  color: var(--primary-color);
+  font-weight: 600;
+  min-width: 100px;
+  margin-right: 16px;
 }
 
 .qrCode {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  margin-top: 20px;
+  text-align: center;
   padding: 20px;
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
+  background: white;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
 }
 
 .qrCode img {
+  display: block;
+  margin: 0 auto;
   border-radius: 8px;
 }
 
@@ -218,58 +212,59 @@
   backdrop-filter: blur(10px);
   padding: 25px;
   border-radius: 12px;
+  margin-bottom: 25px;
   border: 1px solid rgba(255, 255, 255, 0.2);
   position: relative;
   z-index: 2;
 }
 
 .message p {
-  margin: 0;
-  font-size: 14px;
+  margin: 0 0 12px 0;
+  font-size: 16px;
   line-height: 1.7;
   color: #495057;
   font-weight: 500;
 }
 
-.message p:not(:last-child) {
-  margin-bottom: 10px;
+.message p:last-child {
+  margin-bottom: 0;
 }
 
 .buttons {
   display: flex;
+  flex-direction: column;
   gap: 15px;
   margin: 40px 0 20px;
-  justify-content: center;
   max-width: 400px;
   margin-left: auto;
   margin-right: auto;
 }
 
 .downloadButton {
-  flex: 1;
-  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent-color) 0%, var(--secondary-color) 100%);
   color: white;
   border: none;
-  padding: 18px 30px;
+  padding: 15px 30px;
   font-size: 16px;
   font-weight: 600;
-  border-radius: 12px;
+  border-radius: 8px;
   cursor: pointer;
   transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0, 123, 255, 0.3);
+  box-shadow: 0 4px 15px rgba(59, 130, 246, 0.3);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 1px;
   font-family: inherit;
 }
 
 .downloadButton:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 6px 25px rgba(0, 123, 255, 0.4);
-  background: linear-gradient(135deg, #0056b3 0%, #004494 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(59, 130, 246, 0.4);
+  background: linear-gradient(135deg, var(--secondary-color) 0%, var(--primary-color) 100%);
 }
 
 .homeButton {
-  flex: 1;
+  width: 100%;
   background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
   color: white;
   border: none;
@@ -308,18 +303,58 @@
     padding: 60px 40px;
   }
   
-  .section, .messageSection {
+  .section,
+  .messageSection {
     padding: 50px 40px;
   }
   
-  .section::before, .messageSection::before {
+  .section::before,
+  .messageSection::before {
     width: 160px;
     height: 160px;
     top: -40px;
     right: -40px;
   }
   
-  .section h2, .messageSection h2 {
+  .section h2,
+  .messageSection h2 {
     font-size: 24px;
+  }
+  
+  .ticket {
+    flex-direction: row;
+    justify-content: space-between;
+    align-items: flex-start;
+  }
+  
+  .ticketInfo {
+    flex: 1;
+    margin-right: 30px;
+  }
+  
+  .ticketInfo p {
+    font-size: 18px;
+  }
+  
+  .ticketInfo strong {
+    min-width: 120px;
+  }
+  
+  .qrCode {
+    flex-shrink: 0;
+  }
+  
+  .message p {
+    font-size: 17px;
+  }
+  
+  .buttons {
+    flex-direction: row;
+    gap: 20px;
+  }
+  
+  .downloadButton,
+  .homeButton {
+    flex: 1;
   }
 }
