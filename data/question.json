@@ -1,0 +1,126 @@
+{
+  "personalInfo": {
+    "title": "基本情報",
+    "fields": [
+      {
+        "name": "lastName",
+        "label": "姓",
+        "type": "text",
+        "required": true,
+        "placeholder": "山田"
+      },
+      {
+        "name": "firstName",
+        "label": "名",
+        "type": "text",
+        "required": true,
+        "placeholder": "太郎"
+      },
+      {
+        "name": "lastNameKana",
+        "label": "姓（カナ）",
+        "type": "text",
+        "required": true,
+        "placeholder": "ヤマダ"
+      },
+      {
+        "name": "firstNameKana",
+        "label": "名（カナ）",
+        "type": "text",
+        "required": true,
+        "placeholder": "タロウ"
+      },
+      {
+        "name": "email",
+        "label": "メールアドレス",
+        "type": "email",
+        "required": true,
+        "placeholder": "example@example.com"
+      },
+      {
+        "name": "phone",
+        "label": "電話番号",
+        "type": "tel",
+        "required": true,
+        "placeholder": "090-1234-5678"
+      },
+      {
+        "name": "organization",
+        "label": "所属機関",
+        "type": "text",
+        "required": true,
+        "placeholder": "○○大学病院、○○レディースクリニック等"
+      },
+      {
+        "name": "position",
+        "label": "職種・役職",
+        "type": "select",
+        "required": true,
+        "options": [
+          { "value": "physician", "label": "医師" },
+          { "value": "nurse", "label": "看護師" },
+          { "value": "embryologist", "label": "胚培養士" },
+          { "value": "coordinator", "label": "コーディネーター" },
+          { "value": "technician", "label": "臨床検査技師" },
+          { "value": "pharmacist", "label": "薬剤師" },
+          { "value": "researcher", "label": "研究者" },
+          { "value": "student", "label": "学生" },
+          { "value": "other", "label": "その他" }
+        ]
+      },
+      {
+        "name": "ivfMemberNumber",
+        "label": "IVF学会会員番号",
+        "type": "text",
+        "required": false,
+        "placeholder": "会員の方はご記入ください"
+      }
+    ]
+  },
+  "tourInfo": {
+    "title": "見学ツアー情報",
+    "fields": [
+      {
+        "name": "tourDate",
+        "label": "希望見学日",
+        "type": "select",
+        "required": true,
+        "options": [
+          { "value": "2025-08-15", "label": "2025年8月15日（金）14:00-16:00" },
+          { "value": "2025-08-22", "label": "2025年8月22日（金）14:00-16:00" },
+          { "value": "2025-08-29", "label": "2025年8月29日（金）14:00-16:00" }
+        ]
+      },
+      {
+        "name": "participantCount",
+        "label": "参加人数",
+        "type": "number",
+        "required": true,
+        "min": 1,
+        "max": 3,
+        "note": "1名様につき最大3名まで同行可能です"
+      },
+      {
+        "name": "interest",
+        "label": "特に興味のある分野",
+        "type": "checkbox",
+        "required": false,
+        "options": [
+          { "value": "ivf_lab", "label": "IVF実験室・胚培養技術" },
+          { "value": "surgery", "label": "手術室・採卵技術" },
+          { "value": "counseling", "label": "カウンセリング・心理ケア" },
+          { "value": "equipment", "label": "最新機器・設備" },
+          { "value": "quality", "label": "品質管理・安全管理" },
+          { "value": "research", "label": "研究・開発" }
+        ]
+      },
+      {
+        "name": "specialRequests",
+        "label": "特別な配慮事項・質問",
+        "type": "textarea",
+        "required": false,
+        "placeholder": "車椅子での参加、アレルギー、特に質問したい内容等"
+      }
+    ]
+  }
+}

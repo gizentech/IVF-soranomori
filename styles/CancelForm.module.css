@@ -1,0 +1,332 @@
+.container {
+  padding: 0;
+  min-height: 100vh;
+  position: relative;
+  z-index: 10;
+}
+
+.header {
+  text-align: center;
+  padding: 60px 20px 40px;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 200px;
+  opacity: 0.15;
+  z-index: 1;
+  animation: pulse 8s ease-in-out infinite;
+}
+
+.logoContainer {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 30px;
+}
+
+.logo {
+  max-height: 160px;
+  width: auto;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.header h1 {
+  font-size: 24px;
+  margin-bottom: 12px;
+  font-weight: 700;
+  position: relative;
+  z-index: 2;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.header p {
+  font-size: 16px;
+  opacity: 0.95;
+  position: relative;
+  z-index: 2;
+  font-weight: 500;
+}
+
+.content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.section {
+  margin-bottom: 40px;
+  padding: 40px 30px;
+  background: transparent;
+  position: relative;
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.section::before {
+  content: '';
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 140px;
+  height: 140px;
+  background: url('/img/landscape.webp') center/contain no-repeat;
+  opacity: 0.12;
+  z-index: 1;
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.section h2 {
+  font-size: 22px;
+  margin-bottom: 20px;
+  color: var(--primary-color);
+  font-weight: 700;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+}
+
+.section h2::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-color) 0%, transparent 100%);
+  margin-left: 20px;
+}
+
+.sectionIcon {
+  width: 28px;
+  height: 28px;
+  margin-right: 12px;
+  opacity: 0.8;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.description {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  padding: 25px;
+  border-radius: 12px;
+  margin-bottom: 25px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  z-index: 2;
+}
+
+.description p {
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.7;
+  color: #495057;
+  font-weight: 500;
+}
+
+.form {
+  background: transparent;
+  position: relative;
+  z-index: 2;
+}
+
+.fieldGroup {
+  margin-bottom: 20px;
+}
+
+.label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  color: var(--text-color);
+  font-size: 14px;
+  position: relative;
+}
+
+.label::before {
+  content: '●';
+  color: var(--accent-color);
+  font-size: 8px;
+  margin-right: 6px;
+}
+
+.required {
+  color: #dc3545;
+  margin-left: 4px;
+}
+
+.input {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  font-family: inherit;
+}
+
+.textarea {
+  width: 100%;
+  padding: 14px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 16px;
+  transition: all 0.3s ease;
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  font-family: inherit;
+  resize: vertical;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(0, 16, 77, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.textarea:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(0, 16, 77, 0.1);
+  background: rgba(255, 255, 255, 0.95);
+}
+
+.successMessage {
+  background: rgba(212, 237, 218, 0.1);
+  backdrop-filter: blur(10px);
+  color: #155724;
+  padding: 20px;
+  border-radius: 12px;
+  margin: 20px 0;
+  border: 1px solid rgba(40, 167, 69, 0.3);
+  font-size: 14px;
+  font-weight: 500;
+  position: relative;
+  z-index: 2;
+}
+
+.errorMessage {
+  background: rgba(248, 215, 218, 0.1);
+  backdrop-filter: blur(10px);
+  color: #721c24;
+  padding: 20px;
+  border-radius: 12px;
+  margin: 20px 0;
+  border: 1px solid rgba(220, 53, 69, 0.3);
+  font-size: 14px;
+  font-weight: 500;
+  position: relative;
+  z-index: 2;
+}
+
+.buttons {
+  display: flex;
+  gap: 15px;
+  margin: 40px 0 20px;
+  justify-content: center;
+  max-width: 400px;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.backButton {
+  flex: 1;
+  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  font-size: 16px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-weight: 500;
+  font-family: inherit;
+}
+
+.backButton:hover {
+  background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
+  transform: translateY(-2px);
+}
+
+.backButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cancelButton {
+  flex: 2;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  box-shadow: 0 4px 15px rgba(0, 16, 77, 0.3);
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  font-family: inherit;
+}
+
+.cancelButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(0, 16, 77, 0.4);
+  background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%);
+}
+
+.cancelButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+@media (min-width: 768px) {
+  .header {
+    padding: 80px 40px 60px;
+  }
+  
+  .header h1 {
+    font-size: 32px;
+  }
+  
+  .header p {
+    font-size: 18px;
+  }
+  
+  .logo {
+    max-height: 100px;
+  }
+  
+  .content {
+    padding: 60px 40px;
+  }
+  
+  .section {
+    padding: 50px 40px;
+  }
+  
+  .section::before {
+    width: 160px;
+    height: 160px;
+    top: -40px;
+    right: -40px;
+  }
+  
+  .section h2 {
+    font-size: 24px;
+  }
+}

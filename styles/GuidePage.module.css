@@ -1,0 +1,260 @@
+.container {
+  padding: 0;
+  min-height: 100vh;
+  position: relative;
+  z-index: 10;
+}
+
+.header {
+  text-align: center;
+  padding: 60px 20px 40px;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 200px;
+  opacity: 0.15;
+  z-index: 1;
+  animation: pulse 8s ease-in-out infinite;
+}
+
+.logoContainer {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 30px;
+}
+
+.logo {
+  max-height: 160px; /* 80px から 120px に変更 */
+  width: auto;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.header h1 {
+  font-size: 24px;
+  margin-bottom: 12px;
+  font-weight: 700;
+  position: relative;
+  z-index: 2;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.header p {
+  font-size: 16px;
+  opacity: 0.95;
+  position: relative;
+  z-index: 2;
+  font-weight: 500;
+}
+
+.content {
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.section {
+  margin-bottom: 40px;
+  padding: 40px 30px;
+  background: transparent;
+  position: relative;
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.section::before {
+  content: '';
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 140px;
+  height: 140px;
+  opacity: 0.12;
+  z-index: 1;
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.section:nth-child(1)::before {
+  background: url('/img/landscape.webp') center/contain no-repeat;
+}
+
+.section:nth-child(2)::before {
+  background: url('/img/月と星.webp') center/contain no-repeat;
+}
+
+.section:nth-child(3)::before {
+  background: url('/img/鳥の雲.webp') center/contain no-repeat;
+}
+
+.section:nth-child(4)::before {
+  background: url('/img/卵と手の家.webp') center/contain no-repeat;
+}
+
+.section:nth-child(5)::before {
+  background: url('/img/ガーベラ.webp') center/contain no-repeat;
+}
+
+.section:nth-child(6)::before {
+  background: url('/img/家路.webp') center/contain no-repeat;
+}
+
+/* スクロール時の表示アニメーション */
+.section.visible::before {
+  opacity: 0.25;
+  transform: scale(1.1);
+}
+
+.section h2 {
+  font-size: 22px;
+  margin-bottom: 20px;
+  color: var(--primary-color);
+  font-weight: 700;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+}
+
+.section h2::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-color) 0%, transparent 100%);
+  margin-left: 20px;
+}
+
+.sectionIcon {
+  width: 28px;
+  height: 28px;
+  margin-right: 12px;
+  opacity: 0.8;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+}
+
+.section p {
+  font-size: 16px;
+  line-height: 1.8;
+  color: #444;
+  margin-bottom: 16px;
+  position: relative;
+  z-index: 2;
+}
+
+.section strong {
+  color: var(--primary-color);
+  font-weight: 600;
+}
+
+.section ul {
+  margin: 20px 0;
+  padding-left: 24px;
+  position: relative;
+  z-index: 2;
+}
+
+.section li {
+  font-size: 15px;
+  margin-bottom: 12px;
+  color: #444;
+  line-height: 1.7;
+  position: relative;
+}
+
+.section li::marker {
+  color: var(--accent-color);
+  font-size: 1.2em;
+}
+
+.section a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.section a:hover {
+  color: var(--accent-color);
+  text-decoration: underline;
+}
+
+.nextButton {
+  width: 100%;
+  max-width: 400px;
+  margin: 40px auto 0;
+  display: block;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  color: white;
+  border: none;
+  padding: 20px 40px;
+  font-size: 18px;
+  font-weight: 600;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  position: relative;
+  z-index: 2;
+  box-shadow: 0 6px 20px rgba(0, 16, 77, 0.3);
+}
+
+.nextButton:hover {
+  transform: translateY(-3px);
+  background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%);
+  box-shadow: 0 10px 30px rgba(0, 16, 77, 0.4);
+}
+
+@media (min-width: 768px) {
+  .header {
+    padding: 80px 40px 60px;
+  }
+  
+  .header h1 {
+    font-size: 32px;
+  }
+  
+  .header p {
+    font-size: 18px;
+  }
+  
+  .logo {
+    max-height: 100px;
+  }
+  
+  .content {
+    padding: 60px 40px;
+  }
+  
+  .section {
+    padding: 50px 40px;
+  }
+  
+  .section::before {
+    width: 160px;
+    height: 160px;
+    top: -40px;
+    right: -40px;
+  }
+  
+  .section h2 {
+    font-size: 24px;
+  }
+  
+  .section p {
+    font-size: 17px;
+  }
+  
+  .section li {
+    font-size: 16px;
+  }
+}
