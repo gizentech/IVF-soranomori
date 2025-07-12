@@ -4,17 +4,31 @@
     "fields": [
       {
         "name": "lastName",
-        "label": "氏名",
+        "label": "氏名（姓）",
         "type": "text",
         "required": true,
-        "placeholder": "空ノ森 太郎"
+        "placeholder": "空ノ森"
+      },
+      {
+        "name": "firstName",
+        "label": "氏名（名）",
+        "type": "text",
+        "required": true,
+        "placeholder": "太郎"
       },
       {
         "name": "lastNameKana",
-        "label": "氏名カナ",
+        "label": "氏名カナ（姓）",
         "type": "text",
         "required": true,
-        "placeholder": "ソラノモリ タロウ"
+        "placeholder": "ソラノモリ"
+      },
+      {
+        "name": "firstNameKana",
+        "label": "氏名カナ（名）",
+        "type": "text",
+        "required": true,
+        "placeholder": "タロウ"
       },
       {
         "name": "email",
@@ -42,10 +56,10 @@
         "label": "職種・役職",
         "type": "text",
         "required": true,
-        "placeholder": "看護師"
+        "placeholder": "看護師、助産師、医師等"
       },
       {
-              "name": "specialRequests",
+        "name": "specialRequests",
         "label": "特別な配慮事項・質問",
         "type": "textarea",
         "required": false,

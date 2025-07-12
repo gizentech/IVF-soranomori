@@ -16,7 +16,6 @@ export default function GuidePage({ onNext }) {
       })
     }, observerOptions)
 
-    // セクション要素を監視対象に追加
     const sections = document.querySelectorAll(`.${styles.section}`)
     sections.forEach((section) => {
       section.classList.add('scroll-animate')
@@ -43,16 +42,34 @@ export default function GuidePage({ onNext }) {
       <div className={styles.content}>
         <div className={styles.section}>
           <h2>
-            <img src="/img/landscape.webp" alt="" className={styles.sectionIcon} />
-            開催概要
+            <img src="/img/ガーベラ.webp" alt="" className={styles.sectionIcon} />
+            事務局からのご挨拶
           </h2>
-          <p>第23回日本生殖看護学会学術集会終了の翌日に、「空の森クリニック院内見学ツアー」を開催いたします。</p>
-          <p>自然に包まれた空間での医療を実際にご体感いただく良い機会となりますので、皆様のご参加をお待ちしております。</p>
+          <p>第23回日本生殖看護学会学術集会の開催に伴い、空の森クリニック見学ツアーを開催いたします。</p>
+          <p>自然に包まれた医療環境での実践を直接ご覧いただき、生殖看護の新たな可能性を感じていただける機会となれば幸いです。</p>
+          <p>皆様のご参加を心よりお待ちしております。</p>
+          <div className={styles.organizer}>
+            <p><strong>第23回日本生殖看護学会学術集会</strong></p>
+            <p><strong>空の森クリニック見学ツアー 事務局</strong></p>
+            <p>徳永 季子</p>
+          </div>
         </div>
 
         <div className={styles.section}>
           <h2>
             <img src="/img/landscape.webp" alt="" className={styles.sectionIcon} />
+            開催概要
+          </h2>
+          <p>第23回日本生殖看護学会学術集会終了の翌日に、「空の森クリニック院内見学ツアー」を開催いたします。</p>
+          <p>自然に包まれた空間での医療を実際にご体感いただく良い機会となりますので、皆様のご参加をお待ちしております。</p>
+          <p><strong>開催日時:</strong> 2025年10月13日（月）14:00〜（約60分）</p>
+          <p><strong>定員:</strong> 30名（先着順）</p>
+          <p><strong>参加費:</strong> 無料</p>
+        </div>
+
+        <div className={styles.section}>
+          <h2>
+            <img src="/img/月と星.webp" alt="" className={styles.sectionIcon} />
             開催日程・会場
           </h2>
           <p><strong>日程:</strong> 2025年10月13日（月）</p>
@@ -63,7 +80,7 @@ export default function GuidePage({ onNext }) {
 
         <div className={styles.section}>
           <h2>
-            <img src="/img/landscape.webp" alt="" className={styles.sectionIcon} />
+            <img src="/img/鳥の雲.webp" alt="" className={styles.sectionIcon} />
             見学内容
           </h2>
           <ul>
@@ -78,7 +95,7 @@ export default function GuidePage({ onNext }) {
 
         <div className={styles.section}>
           <h2>
-            <img src="/img/landscape.webp" alt="" className={styles.sectionIcon} />
+            <img src="/img/卵と手の家.webp" alt="" className={styles.sectionIcon} />
             対象者
           </h2>
           <p>生殖看護に従事する看護師、助産師、保健師、その他関連職種の方々を対象としております。日本生殖看護学会会員の皆様を優先いたします。</p>
@@ -86,7 +103,7 @@ export default function GuidePage({ onNext }) {
 
         <div className={styles.section}>
           <h2>
-            <img src="/img/landscape.webp" alt="" className={styles.sectionIcon} />
+            <img src="/img/家路.webp" alt="" className={styles.sectionIcon} />
             参加費・注意事項
           </h2>
           <p><strong>参加費:</strong> 無料</p>

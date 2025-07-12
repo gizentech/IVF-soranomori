@@ -15,7 +15,8 @@
     "pdfkit": "^0.13.0",
     "qrcode": "^1.5.4",
     "react": "18.2.0",
-    "react-dom": "18.2.0"
+    "react-dom": "18.2.0",
+    "@napi-rs/canvas": "^0.1.44"
   },
   "devDependencies": {
     "eslint": "8.50.0",

@@ -10,6 +10,11 @@ export default function Home() {
   const [formData, setFormData] = useState({})
   const [uniqueId, setUniqueId] = useState('')
 
+  // ページ切り替え時にスクロールトップに戻る
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }, [currentPage])
+
   const handlePageChange = (page) => {
     setCurrentPage(page)
   }
@@ -47,13 +52,6 @@ export default function Home() {
     }
   }
 
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    })
-  }
-
   const renderCurrentPage = () => {
     switch (currentPage) {
       case 'guide':
@@ -73,16 +71,13 @@ export default function Home() {
 
   return (
     <div className="app-container">
-      {/* 左右の背景アニメーション画像（トップページのみ） */}
       {currentPage === 'guide' && (
         <div className="background-images">
-          {/* 左側の画像 */}
           <div className="bg-image bg-image-left-1"></div>
           <div className="bg-image bg-image-left-2"></div>
           <div className="bg-image bg-image-left-3"></div>
           <div className="bg-image bg-image-left-4"></div>
           
-          {/* 右側の画像 */}
           <div className="bg-image bg-image-right-1"></div>
           <div className="bg-image bg-image-right-2"></div>
           <div className="bg-image bg-image-right-3"></div>

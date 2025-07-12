@@ -60,8 +60,8 @@ export default function CompletionPage({ uniqueId, data, onHome }) {
               <div className={styles.ticketInfo}>
                 <p><strong>予約ID:</strong> {uniqueId}</p>
                 <p><strong>お名前:</strong> {data.lastName} {data.firstName}</p>
-                <p><strong>見学日:</strong> {data.tourDate}</p>
-                <p><strong>参加人数:</strong> {data.participantCount}名</p>
+                <p><strong>見学日:</strong> 2025年10月13日（月）14:00〜</p>
+                <p><strong>所属機関:</strong> {data.organization}</p>
               </div>
               {qrCodeUrl && (
                 <div className={styles.qrCode}>

@@ -13,16 +13,6 @@ export default function ConfirmationForm({ data, onConfirm, onBack }) {
     }
   }
 
-  const formatDate = (dateString) => {
-    const date = new Date(dateString)
-    return date.toLocaleDateString('ja-JP', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      weekday: 'long'
-    })
-  }
-
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -37,7 +27,7 @@ export default function ConfirmationForm({ data, onConfirm, onBack }) {
         <div className={styles.section}>
           <h2>
             <img src="/img/landscape.webp" alt="" className={styles.sectionIcon} />
-            基本情報
+            お申し込み内容
           </h2>
           <div className={styles.confirmationItem}>
             <span className={styles.label}>お名前</span>
@@ -59,26 +49,13 @@ export default function ConfirmationForm({ data, onConfirm, onBack }) {
             <span className={styles.label}>所属機関</span>
             <span className={styles.value}>{data.organization}</span>
           </div>
-          {data.position && (
-            <div className={styles.confirmationItem}>
-              <span className={styles.label}>役職</span>
-              <span className={styles.value}>{data.position}</span>
-            </div>
-          )}
-        </div>
-
-        <div className={styles.section}>
-          <h2>
-            <img src="/img/月と星.webp" alt="" className={styles.sectionIcon} />
-            見学ツアー情報
-          </h2>
           <div className={styles.confirmationItem}>
-            <span className={styles.label}>希望見学日</span>
-            <span className={styles.value}>{formatDate(data.tourDate)}</span>
+            <span className={styles.label}>職種・役職</span>
+            <span className={styles.value}>{data.position}</span>
           </div>
           <div className={styles.confirmationItem}>
-            <span className={styles.label}>参加人数</span>
-            <span className={styles.value}>{data.participantCount}名</span>
+            <span className={styles.label}>見学日</span>
+            <span className={styles.value}>2025年10月13日（月）14:00〜</span>
           </div>
           {data.specialRequests && (
             <div className={styles.confirmationItem}>

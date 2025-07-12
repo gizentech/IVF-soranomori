@@ -312,3 +312,89 @@
     font-size: 24px;
   }
 }
+.eventInfo {
+  background: rgba(255, 255, 255, 0.15);
+  backdrop-filter: blur(10px);
+  padding: 25px;
+  border-radius: 12px;
+  margin-top: 30px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  text-align: center;
+}
+
+.eventDetails p {
+  color: rgba(255, 255, 255, 0.95);
+  font-size: 16px;
+  margin-bottom: 8px;
+  font-weight: 500;
+}
+
+.organizerMessage {
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  padding: 40px 30px;
+  border-radius: 12px;
+  margin-bottom: 40px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  position: relative;
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.organizerMessage::before {
+  content: '';
+  position: absolute;
+  top: -30px;
+  right: -30px;
+  width: 140px;
+  height: 140px;
+  background: url('/img/ガーベラ.webp') center/contain no-repeat;
+  opacity: 0.12;
+  z-index: 1;
+  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.organizerMessage h2 {
+  font-size: 22px;
+  margin-bottom: 20px;
+  color: var(--primary-color);
+  font-weight: 700;
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+}
+
+.organizerMessage h2::after {
+  content: '';
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, var(--accent-color) 0%, transparent 100%);
+  margin-left: 20px;
+}
+
+.message {
+  text-align: left;
+  position: relative;
+  z-index: 2;
+}
+
+.message p {
+  color: #495057;
+  font-size: 16px;
+  line-height: 1.7;
+  margin-bottom: 15px;
+}
+
+.organizer {
+  margin-top: 25px;
+  padding-top: 20px;
+  border-top: 2px solid rgba(0, 16, 77, 0.1);
+  text-align: right;
+}
+
+.organizer p {
+  color: var(--primary-color);
+  font-size: 14px;
+  margin-bottom: 5px;
+  font-weight: 600;
+}
