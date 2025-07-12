@@ -7,21 +7,25 @@ export default function CancelForm({ onBack }) {
   const [reason, setReason] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [message, setMessage] = useState('')
+  const [messageType, setMessageType] = useState('')
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsSubmitting(true)
     setMessage('')
+    setMessageType('')
 
     try {
+      console.log('Submitting cancel request:', { uniqueId, email, reason })
+
       const response = await fetch('/api/cancel', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          uniqueId,
-          email,
+          uniqueId: uniqueId.trim(),
+          email: email.trim(),
           reason
         })
       })
@@ -30,15 +34,18 @@ export default function CancelForm({ onBack }) {
 
       if (response.ok) {
         setMessage('キャンセル手続きが完了しました。')
+        setMessageType('success')
         setUniqueId('')
         setEmail('')
         setReason('')
       } else {
         setMessage(result.error || 'キャンセル手続きに失敗しました。')
+        setMessageType('error')
       }
     } catch (error) {
       console.error('Cancel error:', error)
       setMessage('エラーが発生しました。もう一度お試しください。')
+      setMessageType('error')
     } finally {
       setIsSubmitting(false)
     }
@@ -62,6 +69,7 @@ export default function CancelForm({ onBack }) {
           </h2>
           <div className={styles.description}>
             <p>見学ツアーをキャンセルされる場合は、以下の情報を入力してください。</p>
+            <p><strong>注意：</strong>予約IDとメールアドレスは、お申し込み時に使用したものと完全に一致している必要があります。</p>
           </div>
 
           <form onSubmit={handleSubmit} className={styles.form}>
@@ -74,10 +82,13 @@ export default function CancelForm({ onBack }) {
                 id="uniqueId"
                 value={uniqueId}
                 onChange={(e) => setUniqueId(e.target.value)}
-                placeholder="IVF-SORA******"
+                placeholder="IVF-SORA****** (例: IVF-SORAXLEFBJ)"
                 required
                 className={styles.input}
               />
+              <small className={styles.note}>
+                例: IVF-SORAXLEFBJ (完了メールに記載されています)
+              </small>
             </div>
 
             <div className={styles.fieldGroup}>
@@ -93,6 +104,9 @@ export default function CancelForm({ onBack }) {
                 required
                 className={styles.input}
               />
+              <small className={styles.note}>
+                お申し込み時に使用したメールアドレスを入力してください
+              </small>
             </div>
 
             <div className={styles.fieldGroup}>
@@ -110,7 +124,7 @@ export default function CancelForm({ onBack }) {
             </div>
 
             {message && (
-              <div className={message.includes('完了') ? styles.successMessage : styles.errorMessage}>
+              <div className={messageType === 'success' ? styles.successMessage : styles.errorMessage}>
                 {message}
               </div>
             )}

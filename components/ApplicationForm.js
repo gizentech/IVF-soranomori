@@ -2,10 +2,11 @@ import { useState } from 'react'
 import questions from '../data/question.json'
 import styles from '../styles/ApplicationForm.module.css'
 
-export default function ApplicationForm({ onSubmit, onBack }) {
-  const [formData, setFormData] = useState({})
+export default function ApplicationForm({ onSubmit, onBack, initialData = {} }) {
+  const [formData, setFormData] = useState(initialData)
   const [errors, setErrors] = useState({})
 
+  // 以下は既存のコードと同じ...
   const handleInputChange = (name, value) => {
     setFormData(prev => ({
       ...prev,

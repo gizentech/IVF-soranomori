@@ -1,21 +1,11 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import styles from '../styles/CompletionPage.module.css'
 
 export default function CompletionPage({ uniqueId, data, onHome }) {
-  const [qrCodeUrl, setQrCodeUrl] = useState('')
-
-  useEffect(() => {
-    if (uniqueId && typeof window !== 'undefined') {
-      // 動的インポートでQRCodeを読み込む
-      import('qrcode').then(QRCode => {
-        QRCode.toDataURL(uniqueId, { width: 200 })
-          .then(url => setQrCodeUrl(url))
-          .catch(err => console.error('QR Code generation error:', err))
-      })
-    }
-  }, [uniqueId])
+  const [isGeneratingPDF, setIsGeneratingPDF] = useState(false)
 
   const handleDownloadPDF = async () => {
+    setIsGeneratingPDF(true)
     try {
       const response = await fetch('/api/generate-pdf', {
         method: 'POST',
@@ -33,9 +23,15 @@ export default function CompletionPage({ uniqueId, data, onHome }) {
         a.download = `ivf-sora-ticket-${uniqueId}.pdf`
         a.click()
         window.URL.revokeObjectURL(url)
+      } else {
+        console.error('PDF download failed')
+        alert('PDFのダウンロードに失敗しました。')
       }
     } catch (error) {
       console.error('PDF download error:', error)
+      alert('PDFのダウンロードでエラーが発生しました。')
+    } finally {
+      setIsGeneratingPDF(false)
     }
   }
 
@@ -63,11 +59,6 @@ export default function CompletionPage({ uniqueId, data, onHome }) {
                 <p><strong>見学日:</strong> 2025年10月13日（月）14:00〜</p>
                 <p><strong>所属機関:</strong> {data.organization}</p>
               </div>
-              {qrCodeUrl && (
-                <div className={styles.qrCode}>
-                  <img src={qrCodeUrl} alt="QR Code" width="200" height="200" />
-                </div>
-              )}
             </div>
           </div>
         </div>
@@ -80,13 +71,25 @@ export default function CompletionPage({ uniqueId, data, onHome }) {
           <div className={styles.message}>
             <p>お申し込みありがとうございます。</p>
             <p>確認メールを送信いたしました。</p>
-            <p>当日はこちらの電子チケットをご提示ください。</p>
+            <p>当日は予約IDまたは電子チケットをご提示ください。</p>
+            <p>PDFチケットをダウンロードして印刷してお持ちいただくか、予約IDをメモしてご来場ください。</p>
           </div>
         </div>
 
         <div className={styles.buttons}>
-          <button onClick={handleDownloadPDF} className={styles.downloadButton}>
-            PDFをダウンロード
+          <button 
+            onClick={handleDownloadPDF} 
+            className={styles.downloadButton}
+            disabled={isGeneratingPDF}
+          >
+            {isGeneratingPDF ? (
+              <>
+                <span className={styles.spinner}></span>
+                PDF作成中...
+              </>
+            ) : (
+              'PDFチケットをダウンロード'
+            )}
           </button>
           <button onClick={onHome} className={styles.homeButton}>
             ホームに戻る

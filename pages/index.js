@@ -26,6 +26,8 @@ export default function Home() {
 
   const handleConfirmation = async (data) => {
     try {
+      console.log('Submitting confirmation data:', data)
+      
       const response = await fetch('/api/submit', {
         method: 'POST',
         headers: {
@@ -35,42 +37,87 @@ export default function Home() {
       })
 
       const result = await response.json()
+      console.log('API response:', result)
       
       if (response.ok) {
         setUniqueId(result.uniqueId)
         setCurrentPage('completion')
       } else {
+        // エラーハンドリングを詳細化
         if (result.error === 'CAPACITY_EXCEEDED') {
-          alert('申し訳ございません。定員に達したため、ご予約をお取りできませんでした。')
+          alert('申し訳ございません。定員に達したため、ご予約をお取りできませんでした。キャンセル待ちリストに登録いたします。')
+        } else if (result.error === 'DUPLICATE_EMAIL') {
+          alert('このメールアドレスは既に登録されています。別のメールアドレスをご使用いただくか、既存の予約をご確認ください。')
+          // フォーム画面に戻る
+          setCurrentPage('application')
         } else {
-          alert('エラーが発生しました。もう一度お試しください。')
+          console.error('Submission error:', result.error)
+          alert(`エラーが発生しました: ${result.message || 'もう一度お試しください。'}`)
         }
       }
     } catch (error) {
-      console.error('Submission error:', error)
-      alert('エラーが発生しました。もう一度お試しください。')
+      console.error('Network error:', error)
+      alert('ネットワークエラーが発生しました。インターネット接続をご確認の上、もう一度お試しください。')
     }
+  }
+
+  const handleHome = () => {
+    // 完全にリセットして最初のページに戻る
+    setFormData({})
+    setUniqueId('')
+    setCurrentPage('guide')
   }
 
   const renderCurrentPage = () => {
     switch (currentPage) {
       case 'guide':
-        return <GuidePage onNext={() => handlePageChange('application')} />
+        return (
+          <GuidePage 
+            onNext={() => handlePageChange('application')} 
+          />
+        )
       case 'application':
-        return <ApplicationForm onSubmit={handleFormSubmit} onBack={() => handlePageChange('guide')} />
+        return (
+          <ApplicationForm 
+            onSubmit={handleFormSubmit} 
+            onBack={() => handlePageChange('guide')}
+            initialData={formData} // フォームデータを保持
+          />
+        )
       case 'confirmation':
-        return <ConfirmationForm data={formData} onConfirm={handleConfirmation} onBack={() => handlePageChange('application')} />
+        return (
+          <ConfirmationForm 
+            data={formData} 
+            onConfirm={handleConfirmation} 
+            onBack={() => handlePageChange('application')} 
+          />
+        )
       case 'completion':
-        return <CompletionPage uniqueId={uniqueId} data={formData} onHome={() => handlePageChange('guide')} />
+        return (
+          <CompletionPage 
+            uniqueId={uniqueId} 
+            data={formData} 
+            onHome={handleHome} 
+          />
+        )
       case 'cancel':
-        return <CancelForm onBack={() => handlePageChange('guide')} />
+        return (
+          <CancelForm 
+            onBack={() => handlePageChange('guide')} 
+          />
+        )
       default:
-        return <GuidePage onNext={() => handlePageChange('application')} />
+        return (
+          <GuidePage 
+            onNext={() => handlePageChange('application')} 
+          />
+        )
     }
   }
 
   return (
     <div className="app-container">
+      {/* 背景画像はガイドページでのみ表示 */}
       {currentPage === 'guide' && (
         <div className="background-images">
           <div className="bg-image bg-image-left-1"></div>
@@ -88,13 +135,34 @@ export default function Home() {
 
       {renderCurrentPage()}
       
+      {/* キャンセルボタンはガイドページでのみ表示 */}
       {currentPage === 'guide' && (
         <button 
           className="cancel-button"
           onClick={() => handlePageChange('cancel')}
+          aria-label="キャンセル手続きについて"
         >
           キャンセルについて
         </button>
+      )}
+
+      {/* デバッグ情報（本番環境では削除） */}
+      {process.env.NODE_ENV === 'development' && (
+        <div style={{
+          position: 'fixed',
+          top: '10px',
+          left: '10px',
+          background: 'rgba(0,0,0,0.8)',
+          color: 'white',
+          padding: '10px',
+          borderRadius: '4px',
+          fontSize: '12px',
+          zIndex: 9999
+        }}>
+          <div>Current Page: {currentPage}</div>
+          <div>Unique ID: {uniqueId}</div>
+          <div>Form Data: {Object.keys(formData).length} fields</div>
+        </div>
       )}
     </div>
   )
