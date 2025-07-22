@@ -39,21 +39,18 @@ export default function Home() {
       const result = await response.json()
       console.log('API response:', result)
       
-      if (response.ok) {
+      if (response.ok && result.success) {
+        // 予約成功
         setUniqueId(result.uniqueId)
         setCurrentPage('completion')
+      } else if (!response.ok && result.status === 'full_capacity') {
+        // 定員満了
+        alert('ご予約満員御礼につき、ご予約がお取りできませんでした。')
+        handleHome() // ホームに戻る
       } else {
-        // エラーハンドリングを詳細化
-        if (result.error === 'CAPACITY_EXCEEDED') {
-          alert('申し訳ございません。定員に達したため、ご予約をお取りできませんでした。キャンセル待ちリストに登録いたします。')
-        } else if (result.error === 'DUPLICATE_EMAIL') {
-          alert('このメールアドレスは既に登録されています。別のメールアドレスをご使用いただくか、既存の予約をご確認ください。')
-          // フォーム画面に戻る
-          setCurrentPage('application')
-        } else {
-          console.error('Submission error:', result.error)
-          alert(`エラーが発生しました: ${result.message || 'もう一度お試しください。'}`)
-        }
+        // その他のエラー
+        console.error('Submission error:', result.error)
+        alert(`エラーが発生しました: ${result.message || result.error || 'もう一度お試しください。'}`)
       }
     } catch (error) {
       console.error('Network error:', error)

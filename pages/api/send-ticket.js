@@ -1,7 +1,7 @@
 import nodemailer from 'nodemailer'
 import { updateDesignSheetAndGeneratePDF, clearDesignSheet, exportSheetAsPDF } from '../../lib/googleSheets'
 
-const transporter = nodemailer.createTransport({
+const transporter = nodemailer.createTransporter({
   host: 'soranomori-o.sakura.ne.jp',
   port: 587,
   secure: false,
@@ -19,25 +19,25 @@ export default async function handler(req, res) {
   try {
     const { email, uniqueId, formData } = req.body
 
-    console.log('Starting ticket generation and email sending...')
+    console.log('チケット生成とメール送信を開始...')
 
-    // Google Sheetsのdesignシートを使用してPDF生成
-    console.log('Updating design sheet for ticket generation...')
+    // Google Sheetsのデザインシートを使用してPDF生成
+    console.log('チケット生成のためにデザインシートを更新中...')
     await updateDesignSheetAndGeneratePDF(uniqueId, formData)
     
     // Google Sheetsの更新を待つ
-    console.log('Waiting for sheet update...')
-    await new Promise(resolve => setTimeout(resolve, 3000))
+    console.log('シート更新を待機中...')
+    await new Promise(resolve => setTimeout(resolve, 5000))
     
     // PDFをエクスポート
-    console.log('Exporting PDF from design sheet...')
+    console.log('デザインシートからPDFを出力中...')
     const pdfBuffer = await exportSheetAsPDF('design')
     
-    // designシートをクリア
-    console.log('Clearing design sheet...')
+    // デザインシートをクリア
+    console.log('デザインシートをクリア中...')
     await clearDesignSheet()
 
-    console.log('PDF generated successfully, preparing email...')
+    console.log('PDFの生成に成功しました。メールを準備中...')
 
     const mailOptions = {
       from: {
@@ -485,22 +485,22 @@ export default async function handler(req, res) {
       ]
     }
 
-    console.log('Sending email...')
+    console.log('メールを送信中...')
     await transporter.sendMail(mailOptions)
-    console.log('Email sent successfully to:', email)
+    console.log('メールの送信に成功しました:', email)
 
     res.status(200).json({ message: 'Email sent successfully' })
   } catch (error) {
-    console.error('Email sending error:', error)
+    console.error('メール送信エラー:', error)
     
-    // エラーが発生した場合でもdesignシートをクリア
+    // エラーが発生した場合でもデザインシートをクリア
     try {
       await clearDesignSheet()
-      console.log('Design sheet cleared after error')
+      console.log('エラー後にデザインシートをクリアしました')
     } catch (clearError) {
-      console.error('Design sheet clear error after email failure:', clearError)
+      console.error('メール失敗後のデザインシートクリアエラー:', clearError)
     }
     
-    res.status(500).json({ error: 'Failed to send email: ' + error.message })
+    res.status(500).json({ error: 'メール送信に失敗しました: ' + error.message })
   }
 }

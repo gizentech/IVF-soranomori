@@ -1,13 +1,13 @@
 {
   "functions": {
     "pages/api/submit.js": {
-      "maxDuration": 30
+      "maxDuration": 60
     },
     "pages/api/send-ticket.js": {
-      "maxDuration": 30
+      "maxDuration": 60
     },
     "pages/api/generate-pdf.js": {
-      "maxDuration": 30
+      "maxDuration": 60
     },
     "pages/api/cancel.js": {
       "maxDuration": 30

@@ -8,31 +8,31 @@ export default async function handler(req, res) {
   try {
     const { uniqueId, data } = req.body
 
-    console.log('Starting PDF generation process for download...')
-    console.log('Unique ID:', uniqueId)
-    console.log('Form data:', data)
+    console.log('ダウンロード用PDF生成プロセスを開始...')
+    console.log('ユニークID:', uniqueId)
+    console.log('フォームデータ:', data)
 
     if (!uniqueId || !data) {
-      return res.status(400).json({ error: 'Missing required data' })
+      return res.status(400).json({ error: '必要なデータが不足しています' })
     }
 
-    // 1. designシートに値を設定（QR関連削除）
-    console.log('Updating design sheet...')
+    // デザインシートに値を設定
+    console.log('デザインシートを更新中...')
     await updateDesignSheetAndGeneratePDF(uniqueId, data)
 
-    // 2. 少し待機してからPDF生成（Google Sheetsの更新を待つ）
-    console.log('Waiting for sheet update...')
-    await new Promise(resolve => setTimeout(resolve, 3000))
+    // シート更新の待機時間を延長
+    console.log('シート更新の完了を待機中...')
+    await new Promise(resolve => setTimeout(resolve, 5000))
 
-    // 3. Google SheetsのdesignシートからPDFを生成
-    console.log('Generating PDF from design sheet...')
+    // Google SheetsのデザインシートからPDFを生成
+    console.log('デザインシートからPDFを生成中...')
     const pdfBuffer = await exportSheetAsPDF('design')
 
-    // 4. designシートをクリア
-    console.log('Clearing design sheet...')
+    // デザインシートをクリア
+    console.log('デザインシートをクリア中...')
     await clearDesignSheet()
 
-    console.log('PDF generation completed successfully for download')
+    console.log('ダウンロード用PDF生成が正常に完了しました')
 
     // PDFファイルとしてレスポンス
     res.setHeader('Content-Type', 'application/pdf')
@@ -40,17 +40,17 @@ export default async function handler(req, res) {
     res.setHeader('Content-Length', pdfBuffer.length)
     res.send(pdfBuffer)
   } catch (error) {
-    console.error('PDF generation error:', error)
-    console.error('Error stack:', error.stack)
+    console.error('PDF生成エラー:', error)
+    console.error('エラースタック:', error.stack)
     
-    // エラーが発生してもdesignシートをクリア
+    // エラーが発生してもデザインシートをクリア
     try {
       await clearDesignSheet()
-      console.log('Design sheet cleared after error')
+      console.log('エラー後にデザインシートをクリアしました')
     } catch (clearError) {
-      console.error('Design sheet clear error:', clearError)
+      console.error('デザインシートクリアエラー:', clearError)
     }
     
-    res.status(500).json({ error: 'PDF generation failed: ' + error.message })
+    res.status(500).json({ error: 'PDF生成に失敗しました: ' + error.message })
   }
 }
