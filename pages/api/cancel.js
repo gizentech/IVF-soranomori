@@ -4,15 +4,17 @@ import nodemailer from 'nodemailer'
 const SPREADSHEET_ID = process.env.SPREADSHEET_ID || '1bnvH6hW7v7xq99f12w3IzNmFSFbORYh0nLMW0DbwQEs'
 
 // メール送信設定
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: parseInt(process.env.EMAIL_PORT),
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASSWORD,
-  },
-})
+async function createMailTransporter() {
+  return nodemailer.createTransport({
+    host: process.env.EMAIL_HOST || 'soranomori-o.sakura.ne.jp',
+    port: parseInt(process.env.EMAIL_PORT || '587'),
+    secure: false,
+    auth: {
+      user: process.env.EMAIL_USER || 'ivf-sora-tour@azukikai.or.jp',
+      pass: process.env.EMAIL_PASSWORD || 'sora2025dx',
+    },
+  })
+}
 
 async function getGoogleAuth() {
   const auth = new google.auth.GoogleAuth({
@@ -30,6 +32,8 @@ async function findAndMoveRecord(uniqueId, email, reason) {
   const sheets = google.sheets({ version: 'v4', auth })
 
   try {
+    console.log('キャンセル対象を検索中:', { uniqueId, email })
+
     // 1. Entryシートからデータを取得
     const entryData = await sheets.spreadsheets.values.get({
       spreadsheetId: SPREADSHEET_ID,
@@ -40,15 +44,22 @@ async function findAndMoveRecord(uniqueId, email, reason) {
     let targetRowIndex = -1
     let targetRowData = null
 
+    console.log('Entryシートの行数:', rows.length)
+
     // 2. 予約IDとメールアドレスで該当レコードを検索
     for (let i = 1; i < rows.length; i++) { // ヘッダー行をスキップ
       const row = rows[i]
+      if (!row || row.length < 7) continue
+
       const rowUniqueId = row[1] // B列：予約ID
       const rowEmail = row[6] // G列：メールアドレス
+      
+      console.log(`行${i}: 予約ID=${rowUniqueId}, メール=${rowEmail}`)
       
       if (rowUniqueId === uniqueId && rowEmail === email) {
         targetRowIndex = i + 1 // Google Sheetsは1から始まる
         targetRowData = row
+        console.log('該当レコードを発見:', targetRowData)
         break
       }
     }
@@ -59,10 +70,12 @@ async function findAndMoveRecord(uniqueId, email, reason) {
 
     // 3. Cancelシートに移動するデータを準備
     const cancelData = [
-      ...targetRowData, // 元のデータをコピー
-      new Date().toISOString(), // キャンセル日時を追加
-      reason || '' // キャンセル理由を追加
+      ...targetRowData, // 元のデータをコピー (A-L列)
+      new Date().toISOString(), // M列: キャンセル日時
+      reason || '' // N列: キャンセル理由
     ]
+
+    console.log('Cancelシートに保存するデータ:', cancelData)
 
     // 4. Cancelシートにデータを追加
     await sheets.spreadsheets.values.append({
@@ -124,31 +137,36 @@ async function getSheetId(sheetName) {
 }
 
 async function sendCancelConfirmationEmail(email, uniqueId, lastName, firstName) {
-  const mailOptions = {
-    from: process.env.EMAIL_USER,
-    to: email,
-    subject: '【空の森クリニック】見学ツアーキャンセル完了のご案内',
-    html: `
-      <h2>見学ツアーキャンセル完了</h2>
-      <p>${lastName} ${firstName} 様</p>
-      <p>見学ツアーのキャンセル手続きが完了いたしました。</p>
-      
-      <h3>キャンセル内容</h3>
-      <ul>
-        <li><strong>予約ID:</strong> ${uniqueId}</li>
-        <li><strong>お名前:</strong> ${lastName} ${firstName}</li>
-        <li><strong>キャンセル日時:</strong> ${new Date().toLocaleString('ja-JP')}</li>
-      </ul>
-      
-      <p>またの機会がございましたら、ぜひご参加ください。</p>
-      
-      <p>ご不明な点がございましたら、下記までお問い合わせください。</p>
-      <p>空の森クリニック 看護局<br>
-      TEL: 098-998-0011</p>
-    `
-  }
-
   try {
+    const transporter = await createMailTransporter()
+    
+    const mailOptions = {
+      from: {
+        name: '第23回日本生殖看護学会学術集会 空の森クリニック見学ツアー 事務局',
+        address: 'ivf-sora-tour@azukikai.or.jp'
+      },
+      to: email,
+      subject: '【空の森クリニック】見学ツアーキャンセル完了のご案内',
+      html: `
+        <h2>見学ツアーキャンセル完了</h2>
+        <p>${lastName} ${firstName} 様</p>
+        <p>見学ツアーのキャンセル手続きが完了いたしました。</p>
+        
+        <h3>キャンセル内容</h3>
+        <ul>
+          <li><strong>予約ID:</strong> ${uniqueId}</li>
+          <li><strong>お名前:</strong> ${lastName} ${firstName}</li>
+          <li><strong>キャンセル日時:</strong> ${new Date().toLocaleString('ja-JP')}</li>
+        </ul>
+        
+        <p>またの機会がございましたら、ぜひご参加ください。</p>
+        
+        <p>ご不明な点がございましたら、下記までお問い合わせください。</p>
+        <p>空の森クリニック 看護局<br>
+        TEL: 098-998-0011</p>
+      `
+    }
+
     await transporter.sendMail(mailOptions)
     console.log('キャンセル確認メールの送信が成功しました')
   } catch (error) {
