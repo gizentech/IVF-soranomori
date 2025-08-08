@@ -1,12 +1,12 @@
-// pages/ivf.js（修正版）
+// pages/golf.js（修正版）
 import { useState, useEffect } from 'react'
-import IVFGuidePage from '../components/IVFGuidePage'
-import IVFApplicationForm from '../components/IVFApplicationForm'
-import IVFConfirmationForm from '../components/IVFConfirmationForm'
+import GolfGuidePage from '../components/GolfGuidePage'
+import GolfApplicationForm from '../components/GolfApplicationForm'
+import GolfConfirmationForm from '../components/GolfConfirmationForm'
 import CompletionPage from '../components/CompletionPage'
 import CancelForm from '../components/CancelForm'
 
-export default function IVFTour() {
+export default function GolfCompetition() {
   const [currentPage, setCurrentPage] = useState('guide')
   const [formData, setFormData] = useState({})
   const [uniqueId, setUniqueId] = useState('')
@@ -33,7 +33,7 @@ export default function IVFTour() {
         },
         body: JSON.stringify({
           ...data,
-          eventType: 'ivf'
+          eventType: 'golf'
         }),
       })
 
@@ -43,8 +43,8 @@ export default function IVFTour() {
         setUniqueId(result.uniqueId)
         setCurrentPage('completion')
       } else if (!response.ok && result.status === 'full_capacity') {
-        alert('選択された時間帯は満員です。他の時間帯をお選びください。')
-        setCurrentPage('application')
+        alert('定員に達したため、ご予約をお取りできませんでした。')
+        handleHome()
       } else {
         alert(`エラーが発生しました: ${result.message || result.error || 'もう一度お試しください。'}`)
       }
@@ -63,10 +63,10 @@ export default function IVFTour() {
   const renderCurrentPage = () => {
     switch (currentPage) {
       case 'guide':
-        return <IVFGuidePage onNext={() => handlePageChange('application')} />
+        return <GolfGuidePage onNext={() => handlePageChange('application')} />
       case 'application':
         return (
-          <IVFApplicationForm 
+          <GolfApplicationForm 
             onSubmit={handleFormSubmit} 
             onBack={() => handlePageChange('guide')}
             initialData={formData}
@@ -74,7 +74,7 @@ export default function IVFTour() {
         )
       case 'confirmation':
         return (
-          <IVFConfirmationForm 
+          <GolfConfirmationForm 
             data={formData} 
             onConfirm={handleConfirmation} 
             onBack={() => handlePageChange('application')} 
@@ -86,13 +86,13 @@ export default function IVFTour() {
             uniqueId={uniqueId} 
             data={formData} 
             onHome={handleHome}
-            eventType="ivf"
+            eventType="golf"
           />
         )
       case 'cancel':
         return <CancelForm onBack={() => handlePageChange('guide')} />
       default:
-        return <IVFGuidePage onNext={() => handlePageChange('application')} />
+        return <GolfGuidePage onNext={() => handlePageChange('application')} />
     }
   }
 

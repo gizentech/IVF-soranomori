@@ -1,420 +1,338 @@
-import { google } from 'googleapis'
+// pages/api/submit.js
+import { db } from '../../lib/firebase'
+import { collection, addDoc, query, where, getDocs, serverTimestamp } from 'firebase/firestore'
+import { sendSlackNotification } from '../../lib/slack'
 import nodemailer from 'nodemailer'
-import { updateDesignSheetAndGeneratePDF, clearDesignSheet, exportSheetAsPDF } from '../../lib/googleSheets'
 
-const SPREADSHEET_ID = process.env.SPREADSHEET_ID || '1bnvH6hW7v7xq99f12w3IzNmFSFbORYh0nLMW0DbwQEs'
-const MAX_ENTRIES = 30
+const MAX_ENTRIES = {
+  nursing: 30,
+  ivf: 20,
+  golf: 16 // 16組（最大64人）
+}
 
 async function createMailTransporter() {
-  return nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'soranomori-o.sakura.ne.jp',
-    port: parseInt(process.env.EMAIL_PORT || '587'),
+  const transporterConfig = {
+    host: process.env.EMAIL_HOST,
+    port: parseInt(process.env.EMAIL_PORT),
     secure: false,
     auth: {
-      user: process.env.EMAIL_USER || 'ivf-sora-tour@azukikai.or.jp',
-      pass: process.env.EMAIL_PASSWORD || 'sora2025dx',
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASSWORD,
     },
-  })
-}
-
-async function getGoogleAuth() {
-  try {
-    console.log('Environment variables check:')
-    console.log('GOOGLE_SERVICE_ACCOUNT_EMAIL:', process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL ? 'Set' : 'Not set')
-    console.log('GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY:', process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY ? 'Set' : 'Not set')
-    console.log('SPREADSHEET_ID:', process.env.SPREADSHEET_ID ? 'Set' : 'Not set')
-
-    if (!process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL) {
-      throw new Error('GOOGLE_SERVICE_ACCOUNT_EMAIL environment variable is not set')
+    debug: true,
+    logger: true,
+    tls: {
+      rejectUnauthorized: false
     }
-    
-    if (!process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
-      throw new Error('GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY environment variable is not set')
-    }
-
-    const auth = new google.auth.GoogleAuth({
-      credentials: {
-        client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-        private_key: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-      },
-      scopes: ['https://www.googleapis.com/auth/spreadsheets'],
-    })
-    
-    const authClient = await auth.getClient()
-    const accessToken = await authClient.getAccessToken()
-    
-    if (!accessToken.token) {
-      throw new Error('有効なアクセストークンを取得できませんでした')
-    }
-
-    console.log('Google認証が正常に設定されました')
-    return auth
-  } catch (error) {
-    console.error('Google認証の設定に失敗:', error)
-    throw new Error(`Google認証エラー: ${error.message}`)
   }
+
+  return nodemailer.createTransport(transporterConfig)
 }
 
-async function checkEntryCapacity() {
+async function checkCapacity(eventType, selectedTimeSlot = null) {
   try {
-    const auth = await getGoogleAuth()
-    const sheets = google.sheets({ version: 'v4', auth })
+    console.log(`Checking capacity for ${eventType}, timeSlot: ${selectedTimeSlot}`)
+    
+    let queryConstraint
+    
+    if (eventType === 'ivf' && selectedTimeSlot) {
+      queryConstraint = query(
+        collection(db, 'registrations'),
+        where('eventType', '==', eventType),
+        where('selectedTimeSlot', '==', selectedTimeSlot),
+        where('status', '==', 'active')
+      )
+    } else if (eventType === 'golf') {
+      // ゴルフの場合は組数で管理
+      queryConstraint = query(
+        collection(db, 'registrations'),
+        where('eventType', '==', eventType),
+        where('status', '==', 'active'),
+        where('isGroupRepresentative', '==', true) // 代表者のみカウント
+      )
+    } else {
+      queryConstraint = query(
+        collection(db, 'registrations'),
+        where('eventType', '==', eventType),
+        where('status', '==', 'active')
+      )
+    }
 
-    const entryData = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: 'Entry!A:A',
-    })
+    const snapshot = await getDocs(queryConstraint)
+    const currentCount = snapshot.size
+    const maxEntries = MAX_ENTRIES[eventType] || 30
 
-    const rows = entryData.data.values || []
-    const currentEntries = rows.length > 0 ? rows.length - 1 : 0
-
-    console.log(`現在の予約数: ${currentEntries}/${MAX_ENTRIES}`)
+    console.log(`${eventType} current count: ${currentCount}/${maxEntries}`)
 
     return {
-      currentCount: currentEntries,
-      isAvailable: currentEntries < MAX_ENTRIES,
-      remainingSlots: Math.max(0, MAX_ENTRIES - currentEntries)
+      currentCount,
+      isAvailable: currentCount < maxEntries,
+      remainingSlots: Math.max(0, maxEntries - currentCount)
     }
   } catch (error) {
-    console.error('予約数確認エラー:', error)
-    throw error
+    console.error('Capacity check error:', error)
+    throw new Error(`定員チェックでエラーが発生しました: ${error.message}`)
   }
 }
 
-async function saveToEntrySheet(data) {
+async function saveToFirestore(data, status = 'active') {
   try {
-    const auth = await getGoogleAuth()
-    const sheets = google.sheets({ version: 'v4', auth })
+    console.log('Saving to Firestore:', { ...data, status })
+    
+    const collectionName = status === 'active' ? 'registrations' : 'over_capacity'
+    const savedDocuments = []
 
-    // 正確な列順序でデータを配置
-    const values = [[
-      new Date().toISOString(), // A列: 送信日時
-      data.uniqueId, // B列: 予約ID
-      data.lastName || '', // C列: 姓
-      data.firstName || '', // D列: 名
-      data.lastNameKana || '', // E列: 姓（カナ）
-      data.firstNameKana || '', // F列: 名（カナ）
-      data.email || '', // G列: メールアドレス
-      data.phone || '', // H列: 電話番号
-      data.organization || '', // I列: 所属機関
-      data.position || '', // J列: 職種・役職
-      data.specialRequests || '', // K列: 特別な配慮事項
-      'active' // L列: ステータス
-    ]]
-
-    console.log('保存するデータの詳細:')
-    console.log('A列-送信日時:', new Date().toISOString())
-    console.log('B列-予約ID:', data.uniqueId)
-    console.log('C列-姓:', data.lastName)
-    console.log('D列-名:', data.firstName)
-    console.log('E列-姓（カナ）:', data.lastNameKana)
-    console.log('F列-名（カナ）:', data.firstNameKana)
-    console.log('G列-メールアドレス:', data.email)
-    console.log('H列-電話番号:', data.phone)
-    console.log('I列-所属機関:', data.organization)
-    console.log('J列-職種:', data.position)
-    console.log('K列-特別な配慮:', data.specialRequests)
-    console.log('L列-ステータス: active')
-
-    console.log('Entryシートに保存するデータ配列:', values[0])
-
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: 'Entry!A:L',
-      valueInputOption: 'USER_ENTERED',
-      resource: { values }
-    })
-
-    console.log('Entryシートへの保存が成功しました')
-  } catch (error) {
-    console.error('Entryシート保存エラー:', error)
-    throw error
-  }
-}
-
-async function saveToOverSheet(data) {
-  try {
-    const auth = await getGoogleAuth()
-    const sheets = google.sheets({ version: 'v4', auth })
-
-    // 定員超過用のシートに保存（同じ列構成）
-    const values = [[
-      new Date().toISOString(), // A列: 送信日時
-      data.uniqueId, // B列: 予約ID
-      data.lastName || '', // C列: 姓
-      data.firstName || '', // D列: 名
-      data.lastNameKana || '', // E列: 姓（カナ）
-      data.firstNameKana || '', // F列: 名（カナ）
-      data.email || '', // G列: メールアドレス
-      data.phone || '', // H列: 電話番号
-      data.organization || '', // I列: 所属機関
-      data.position || '', // J列: 職種・役職
-      data.specialRequests || '', // K列: 特別な配慮事項
-      'over_capacity' // L列: ステータス（定員超過）
-    ]]
-
-    console.log('overシートに保存するデータ:', values[0])
-
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: 'over!A:L',
-      valueInputOption: 'USER_ENTERED',
-      resource: { values }
-    })
-
-    console.log('overシートへの保存が成功しました')
-  } catch (error) {
-    console.error('overシート保存エラー:', error)
-    throw error
-  }
-}
-
-async function saveToDesignSheet(data) {
-  try {
-    const auth = await getGoogleAuth()
-    const sheets = google.sheets({ version: 'v4', auth })
-
-    const updates = [
-      {
-        range: 'design!G11',
-        values: [[data.uniqueId]]
-      },
-      {
-        range: 'design!G14',
-        values: [[`${data.lastName} ${data.firstName}`]]
-      },
-      {
-        range: 'design!G20',
-        values: [[data.organization]]
+    if (data.eventType === 'golf' && data.participants) {
+      // ゴルフの場合：代表者＋参加者を個別に保存
+      const groupId = data.uniqueId
+      
+      // 代表者を保存
+      const representativeData = {
+        ...data,
+        isGroupRepresentative: true,
+        groupId: groupId,
+        participantType: 'representative',
+        participantNumber: 1,
+        name: data.representativeName,
+        kana: data.representativeKana,
+        status,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       }
-    ]
+      
+      const repDoc = await addDoc(collection(db, collectionName), representativeData)
+      savedDocuments.push(repDoc.id)
+      console.log(`Representative saved with ID: ${repDoc.id}`)
 
-    await sheets.spreadsheets.values.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
-      resource: {
-        valueInputOption: 'USER_ENTERED',
-        data: updates
+      // 参加者を保存
+      for (let i = 0; i < data.participants.length; i++) {
+        const participant = data.participants[i]
+        if (participant.name.trim()) {
+          const participantData = {
+            ...data,
+            isGroupRepresentative: false,
+            groupId: groupId,
+            participantType: 'member',
+            participantNumber: i + 2,
+            name: participant.name,
+            kana: participant.kana,
+            // 代表者の連絡先情報を継承
+            representativeName: data.representativeName,
+            representativeEmail: data.email,
+            representativePhone: data.phone,
+            representativeCompany: data.companyName,
+            status,
+            createdAt: serverTimestamp(),
+            updatedAt: serverTimestamp()
+          }
+          
+          const memberDoc = await addDoc(collection(db, collectionName), participantData)
+          savedDocuments.push(memberDoc.id)
+          console.log(`Participant ${i + 2} saved with ID: ${memberDoc.id}`)
+        }
       }
-    })
+    } else {
+      // 通常の場合（nursing, ivf）
+      const docData = {
+        ...data,
+        status,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      }
 
-    console.log('designシートへの保存が成功しました')
+      const docRef = await addDoc(collection(db, collectionName), docData)
+      savedDocuments.push(docRef.id)
+      console.log(`Document saved with ID: ${docRef.id} in collection: ${collectionName}`)
+    }
+    
+    return savedDocuments
   } catch (error) {
-    console.error('designシート保存エラー:', error)
-    throw error
+    console.error('Firestore save error:', error)
+    throw new Error(`データ保存でエラーが発生しました: ${error.message}`)
   }
 }
 
-async function sendConfirmationEmailWithPDF(data) {
+async function sendConfirmationEmail(data) {
   try {
-    // 1. PDFを生成
-    console.log('PDFチケットを生成中...')
-    await updateDesignSheetAndGeneratePDF(data.uniqueId, data)
+    console.log('=== メール送信開始 ===')
+    console.log('送信先:', data.email)
     
-    // シート更新の完了を待つ
-    console.log('シート更新の完了を待機中...')
-    await new Promise(resolve => setTimeout(resolve, 5000))
-    
-    // 2. PDFを取得
-    console.log('PDFを出力中...')
-    const pdfBuffer = await exportSheetAsPDF('design')
-    console.log('PDFの生成が完了しました')
-    
-    // 3. デザインシートをクリア
-    console.log('デザインシートをクリア中...')
-    await clearDesignSheet()
-    
-    // 4. メール送信
-    console.log('PDFチケット付きメールを送信中...')
     const transporter = await createMailTransporter()
     
+    console.log('SMTP接続をテスト中...')
+    await transporter.verify()
+    console.log('SMTP接続成功')
+    
+    const eventTitles = {
+      nursing: '第23回日本生殖看護学会学術集会 見学ツアー',
+      ivf: '第28回日本IVF学会学術集会 見学ツアー',
+      golf: '第28回日本IVF学会学術集会杯 ゴルフコンペ'
+    }
+
+    let dateTimeInfo = ''
+    if (data.eventType === 'nursing') {
+      dateTimeInfo = '2025年10月13日（月）14:00〜'
+    } else if (data.eventType === 'ivf') {
+      dateTimeInfo = data.selectedTimeSlot || '未選択'
+    } else if (data.eventType === 'golf') {
+      dateTimeInfo = '2025年10月10日（金）7:28スタート'
+    }
+
+    let eventSpecificContent = ''
+    if (data.eventType === 'golf') {
+      let participantsList = ''
+      if (data.participants && data.participants.filter(p => p.name.trim()).length > 0) {
+        participantsList = `
+          <h4>参加者一覧</h4>
+          <ul>
+            <li>代表者: ${data.representativeName} (${data.representativeKana})</li>
+            ${data.participants
+              .filter(p => p.name.trim())
+              .map((p, i) => `<li>参加者${i + 2}: ${p.name} (${p.kana})</li>`)
+              .join('')}
+          </ul>
+        `
+      }
+      
+      eventSpecificContent = `
+        <div style="background: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107; margin: 15px 0;">
+          <h4 style="margin-top: 0;">当日のスケジュール</h4>
+          <ul style="margin: 0; padding-left: 20px;">
+            <li><strong>7:00</strong> 集合（那覇ゴルフ倶楽部）</li>
+            <li><strong>7:28</strong> スタート</li>
+            <li><strong>13:00</strong> 懇親会・表彰式</li>
+          </ul>
+          <p style="margin: 10px 0 0;"><strong>参加形態:</strong> ${getParticipationTypeLabel(data.participationType)}</p>
+          <p style="margin: 10px 0 0;"><strong>参加人数:</strong> ${data.totalParticipants}名</p>
+          ${participantsList}
+        </div>
+      `
+    } else if (data.eventType === 'ivf') {
+      eventSpecificContent = `
+        <div style="background: #e3f2fd; padding: 15px; border-radius: 5px; border-left: 4px solid #2196f3; margin: 15px 0;">
+          <h4 style="margin-top: 0;">当日のご案内</h4>
+          <ul style="margin: 0; padding-left: 20px;">
+            <li>開始時間の10分前にはお越しください</li>
+            <li>感染対策にご協力ください（マスク着用必須）</li>
+            <li>動きやすい服装でお越しください</li>
+          </ul>
+        </div>
+      `
+    } else if (data.eventType === 'nursing') {
+      eventSpecificContent = `
+        <div style="background: #f3e5f5; padding: 15px; border-radius: 5px; border-left: 4px solid #9c27b0; margin: 15px 0;">
+          <h4 style="margin-top: 0;">当日のご案内</h4>
+          <ul style="margin: 0; padding-left: 20px;">
+            <li>開始時間の10分前にはお越しください</li>
+            <li>感染対策にご協力ください（マスク着用必須）</li>
+            <li>動きやすい服装でお越しください</li>
+            <li>写真撮影は指定された場所のみ可能です</li>
+          </ul>
+        </div>
+      `
+    }
+
+    // ゴルフの場合は代表者名を使用
+    const recipientName = data.eventType === 'golf' 
+      ? data.representativeName 
+      : `${data.lastName} ${data.firstName}`
+
     const mailOptions = {
       from: {
-        name: '第23回日本生殖看護学会学術集会 空の森クリニック見学ツアー 事務局',
-        address: 'ivf-sora-tour@azukikai.or.jp'
+        name: '空の森クリニック イベント事務局',
+        address: process.env.EMAIL_USER
       },
       to: data.email,
-      subject: '【第23回日本生殖看護学会学術集会】空の森クリニック見学ツアー お申し込み完了のお知らせ',
+      subject: `【${eventTitles[data.eventType]}】お申し込み完了のお知らせ`,
+      text: `
+${recipientName} 様
+
+この度は、${eventTitles[data.eventType]}にお申し込みいただき、誠にありがとうございます。
+
+■ご予約内容
+予約ID: ${data.uniqueId}
+お名前: ${recipientName}
+開催日時: ${dateTimeInfo}
+所属機関: ${data.organization || data.companyName}
+
+当日は予約ID「${data.uniqueId}」を受付でお伝えください。
+
+空の森クリニック イベント事務局
+TEL: 098-998-0011
+Email: ${process.env.EMAIL_USER}
+      `,
       html: `
-        <!DOCTYPE html>
-        <html lang="ja">
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body { font-family: 'Yu Gothic', sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; }
-            .header { background: linear-gradient(135deg, #00104d 0%, #1e3a8a 100%); padding: 30px; text-align: center; color: white; }
-            .content { padding: 30px; }
-            .reservation-info { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
-            .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; }
-            .highlight { background: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107; margin: 15px 0; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>第23回日本生殖看護学会学術集会</h1>
-              <h2>空の森クリニック見学ツアー</h2>
-              <p>お申し込み完了のお知らせ</p>
+        <div style="font-family: 'Yu Gothic', sans-serif; line-height: 1.6; color: #333;">
+          <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 32px rgba(0, 16, 77, 0.15);">
+            <div style="background: linear-gradient(135deg, #00104d 0%, #1e3a8a 100%); padding: 30px; text-align: center; color: white;">
+              <h1 style="margin: 0; font-size: 20px;">${eventTitles[data.eventType]}</h1>
+              <p style="margin: 10px 0 0; font-size: 16px;">お申し込み完了のお知らせ</p>
             </div>
             
-            <div class="content">
-              <p><strong>${data.lastName} ${data.firstName}</strong> 様</p>
+            <div style="padding: 30px;">
+              <p><strong>${recipientName}</strong> 様</p>
               
-              <p>この度は、空の森クリニック見学ツアーにお申し込みいただき、誠にありがとうございます。</p>
-              <p>自然に包まれた医療環境での実践をご体験いただけることを楽しみにしております。</p>
+              <p>この度は、${eventTitles[data.eventType]}にお申し込みいただき、誠にありがとうございます。</p>
               
-              <div class="reservation-info">
-                <h3>ご予約内容</h3>
-                <ul>
-                  <li><strong>予約ID:</strong> ${data.uniqueId}</li>
-                  <li><strong>お名前:</strong> ${data.lastName} ${data.firstName}</li>
-                  <li><strong>見学日:</strong> 2025年10月13日（月）14:00〜</li>
-                  <li><strong>所属機関:</strong> ${data.organization}</li>
+              <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">ご予約内容</h3>
+                <ul style="list-style: none; padding: 0;">
+                  <li style="margin-bottom: 8px;"><strong>予約ID:</strong> ${data.uniqueId}</li>
+                  <li style="margin-bottom: 8px;"><strong>お名前:</strong> ${recipientName}</li>
+                  <li style="margin-bottom: 8px;"><strong>開催日時:</strong> ${dateTimeInfo}</li>
+                  <li style="margin-bottom: 8px;"><strong>所属機関:</strong> ${data.organization || data.companyName}</li>
                 </ul>
               </div>
               
-              <h3>当日のご案内</h3>
-              <ul>
-                <li>開始時間の10分前にはお越しください</li>
-                <li><strong>添付のPDFチケットまたは予約IDを受付にてご提示ください</strong></li>
-                <li>感染対策にご協力をお願いいたします（マスク着用必須）</li>
-                <li>動きやすい服装でお越しください</li>
-                <li>写真撮影は指定された場所のみ可能です</li>
-              </ul>
+              ${eventSpecificContent}
               
-              <div class="highlight">
-                <strong>📎 電子チケットについて</strong><br>
-                このメールには電子チケット（PDF）が添付されています。当日はこのPDFを印刷してお持ちいただくか、スマートフォンで表示してご提示ください。
+              <div style="background: #e8f5e8; padding: 15px; border-radius: 5px; border-left: 4px solid #4caf50; margin: 15px 0;">
+                <p style="margin: 0;"><strong>重要:</strong> 当日は予約ID「<strong>${data.uniqueId}</strong>」を受付でお伝えください。</p>
               </div>
-              
-              <h3>キャンセルについて</h3>
-              <p>やむを得ずキャンセルされる場合は、申し込みサイトのキャンセルフォームよりお手続きください。</p>
               
               <p>ご不明な点がございましたら、お気軽にお問い合わせください。</p>
               <p><strong>当日お会いできますことを心よりお待ちしております。</strong></p>
             </div>
             
-            <div class="footer">
-              <p><strong>第23回日本生殖看護学会学術集会</strong></p>
-              <p><strong>空の森クリニック見学ツアー 事務局</strong></p>
-              <p>徳永 季子</p>
-              <p>Email: ivf-sora-tour@azukikai.or.jp</p>
-              <p>空の森クリニック 看護局 TEL: 098-998-0011</p>
+            <div style="background: #f8f9fa; padding: 20px; text-align: center; color: #666;">
+              <p><strong>空の森クリニック イベント事務局</strong></p>
+              <p>TEL: 098-998-0011</p>
+              <p>Email: ${process.env.EMAIL_USER}</p>
             </div>
           </div>
-        </body>
-        </html>
-      `,
-      attachments: [
-        {
-          filename: `ivf-sora-ticket-${data.uniqueId}.pdf`,
-          content: pdfBuffer,
-          contentType: 'application/pdf'
-        }
-      ]
-    }
-
-    await transporter.sendMail(mailOptions)
-    console.log('PDFチケット付き確認メールの送信が成功しました:', data.email)
-  } catch (error) {
-    console.error('PDFメール送信エラー:', error)
-    
-    // PDFの生成に失敗した場合は、PDF無しでメールを送信
-    console.log('PDF生成に失敗したため、PDF無しでメール送信を試行します')
-    await sendConfirmationEmailWithoutPDF(data)
-  }
-}
-
-// PDF無しのメール送信（フォールバック用）
-async function sendConfirmationEmailWithoutPDF(data) {
-  try {
-    const transporter = await createMailTransporter()
-    
-    const mailOptions = {
-      from: {
-        name: '第23回日本生殖看護学会学術集会 空の森クリニック見学ツアー 事務局',
-        address: 'ivf-sora-tour@azukikai.or.jp'
-      },
-      to: data.email,
-      subject: '【第23回日本生殖看護学会学術集会】空の森クリニック見学ツアー お申し込み完了のお知らせ',
-      html: `
-        <!DOCTYPE html>
-        <html lang="ja">
-        <head>
-          <meta charset="UTF-8">
-          <style>
-            body { font-family: 'Yu Gothic', sans-serif; line-height: 1.6; color: #333; }
-            .container { max-width: 600px; margin: 0 auto; }
-            .header { background: linear-gradient(135deg, #00104d 0%, #1e3a8a 100%); padding: 30px; text-align: center; color: white; }
-            .content { padding: 30px; }
-            .reservation-info { background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0; }
-            .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; }
-            .warning { background: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107; margin: 15px 0; }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="header">
-              <h1>第23回日本生殖看護学会学術集会</h1>
-              <h2>空の森クリニック見学ツアー</h2>
-              <p>お申し込み完了のお知らせ</p>
-            </div>
-            
-            <div class="content">
-              <p><strong>${data.lastName} ${data.firstName}</strong> 様</p>
-              
-              <p>この度は、空の森クリニック見学ツアーにお申し込みいただき、誠にありがとうございます。</p>
-              
-              <div class="reservation-info">
-                <h3>お申し込み内容</h3>
-                <ul>
-                  <li><strong>予約ID:</strong> ${data.uniqueId}</li>
-                  <li><strong>お名前:</strong> ${data.lastName} ${data.firstName}</li>
-                  <li><strong>見学日:</strong> 2025年10月13日（月）14:00〜</li>
-                  <li><strong>所属機関:</strong> ${data.organization}</li>
-                </ul>
-              </div>
-              
-              <h3>当日のご案内</h3>
-              <ul>
-                <li>集合時間：14:00（受付開始 13:45）</li>
-                <li>集合場所：空の森クリニック 1階受付</li>
-                <li><strong>予約ID: ${data.uniqueId}</strong> を受付にてお伝えください</li>
-                <li>感染対策にご協力ください（マスク着用必須）</li>
-              </ul>
-              
-              <div class="warning">
-                <strong>注意:</strong> 電子チケットの生成でエラーが発生しました。当日は上記の予約IDをお伝えください。
-              </div>
-              
-              <p>ご不明な点がございましたら、下記までお問い合わせください。</p>
-              <p><strong>当日お会いできますことを心よりお待ちしております。</strong></p>
-            </div>
-            
-            <div class="footer">
-              <p><strong>第23回日本生殖看護学会学術集会</strong></p>
-              <p><strong>空の森クリニック見学ツアー 事務局</strong></p>
-              <p>徳永 季子</p>
-              <p>Email: ivf-sora-tour@azukikai.or.jp</p>
-              <p>空の森クリニック 看護局 TEL: 098-998-0011</p>
-            </div>
-          </div>
-        </body>
-        </html>
+        </div>
       `
     }
 
-    await transporter.sendMail(mailOptions)
-    console.log('フォールバック確認メールの送信が成功しました:', data.email)
+    const info = await transporter.sendMail(mailOptions)
+    console.log('メール送信成功:', info.messageId)
+
+    return { success: true, messageId: info.messageId }
+
   } catch (error) {
-    console.error('フォールバックメール送信エラー:', error)
-    console.log('メール送信に失敗しましたが、予約は正常に完了しています')
+    console.error('メール送信エラー:', error)
+    return { success: false, error: error.message }
   }
 }
 
-function generateUniqueId() {
+function getParticipationTypeLabel(participationType) {
+  const labels = {
+    'golf_only': 'ゴルフコンペのみ参加',
+    'party_only': '表彰式のみ参加',
+    'both': 'どちらも両方参加'
+  }
+  return labels[participationType] || participationType
+}
+
+function generateUniqueId(eventType) {
+  const prefixes = {
+    nursing: 'IVF-SORA',
+    ivf: 'IVF-TOUR',
+    golf: 'IVF-GOLF'
+  }
+  
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789'
-  let result = 'IVF-SORA'
+  let result = prefixes[eventType] || 'IVF-SORA'
   for (let i = 0; i < 6; i++) {
     result += chars.charAt(Math.floor(Math.random() * chars.length))
   }
@@ -422,8 +340,17 @@ function generateUniqueId() {
 }
 
 export default async function handler(req, res) {
-  console.log('API called with method:', req.method)
-  console.log('Request body:', req.body)
+  console.log('=== Submit API Called ===')
+  console.log('Method:', req.method)
+  
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+  if (req.method === 'OPTIONS') {
+    res.status(200).end()
+    return
+  }
   
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
@@ -431,23 +358,22 @@ export default async function handler(req, res) {
 
   try {
     const formData = req.body
-    const uniqueId = generateUniqueId()
-    
-    // フォームデータの各フィールドを詳細にログ出力
-    console.log('=== フォームデータの詳細 ===')
-    console.log('lastName:', formData.lastName)
-    console.log('firstName:', formData.firstName)
-    console.log('lastNameKana:', formData.lastNameKana)
-    console.log('firstNameKana:', formData.firstNameKana)
-    console.log('email:', formData.email)
-    console.log('phone:', formData.phone)
-    console.log('organization:', formData.organization)
-    console.log('position:', formData.position)
-    console.log('specialRequests:', formData.specialRequests)
-    console.log('========================')
+    console.log('Form data received:', formData)
+
+    // 基本バリデーション
+    if (!formData.eventType || !formData.email) {
+      return res.status(400).json({ 
+        error: '必須項目が不足しています',
+        required: ['eventType', 'email']
+      })
+    }
+
+    const uniqueId = generateUniqueId(formData.eventType)
+    console.log('Generated unique ID:', uniqueId)
     
     const submissionData = {
       uniqueId,
+      eventType: formData.eventType,
       lastName: formData.lastName || '',
       firstName: formData.firstName || '',
       lastNameKana: formData.lastNameKana || '',
@@ -456,74 +382,78 @@ export default async function handler(req, res) {
       phone: formData.phone || '',
       organization: formData.organization || '',
       position: formData.position || '',
-      specialRequests: formData.specialRequests || ''
+      specialRequests: formData.specialRequests || '',
+      selectedTimeSlot: formData.selectedTimeSlot || null,
+      // ゴルフ専用フィールド
+      representativeName: formData.representativeName || '',
+      representativeKana: formData.representativeKana || '',
+      companyName: formData.companyName || '',
+      participationType: formData.participationType || null,
+      participants: formData.participants || [],
+      totalParticipants: formData.totalParticipants || 1,
+      remarks: formData.remarks || '',
+      // IVF専用フィールド
+      experience: formData.experience || null,
+      interests: formData.interests || null,
     }
 
-    console.log('処理用データ:', submissionData)
+    console.log('Submission data prepared:', submissionData)
 
-    // Google Sheetsの環境変数がある場合のみGoogle Sheets処理を実行
-    if (process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL && process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY) {
-      console.log('Google Sheets機能が有効です')
+    // 定員チェック
+    const capacityCheck = await checkCapacity(formData.eventType, formData.selectedTimeSlot)
+    console.log('Capacity check result:', capacityCheck)
+
+    if (capacityCheck.isAvailable) {
+      console.log(`Registration available (${capacityCheck.remainingSlots} slots remaining)`)
       
-      const capacityCheck = await checkEntryCapacity()
-      console.log('予約状況:', capacityCheck)
+      await saveToFirestore(submissionData, 'active')
+      console.log('Data saved to Firestore successfully')
 
-      if (capacityCheck.isAvailable) {
-        console.log(`予約受付可能 (残り${capacityCheck.remainingSlots}件)`)
-        
-        await saveToEntrySheet(submissionData)
-        console.log('Entryシートへの保存完了')
+      const emailResult = await sendConfirmationEmail(submissionData)
+      console.log('Email result:', emailResult)
 
-        await saveToDesignSheet(submissionData)
-        console.log('designシートへの保存完了')
-
-        // PDFチケット付きメールを送信
-        await sendConfirmationEmailWithPDF(submissionData)
-        console.log('PDFチケット付き確認メール送信完了')
-
-        res.status(200).json({
-          success: true,
-          uniqueId,
-          status: 'confirmed',
-          message: 'お申し込みが完了しました',
-          remainingSlots: capacityCheck.remainingSlots - 1
-        })
-
-      } else {
-        console.log('定員超過のため、overシートに保存')
-        
-        await saveToOverSheet(submissionData)
-        console.log('overシートへの保存完了')
-
-        res.status(400).json({
-          success: false,
-          uniqueId,
-          status: 'full_capacity',
-          message: 'ご予約満員御礼につき、ご予約がお取りできませんでした。',
-          currentEntries: capacityCheck.currentCount,
-          maxEntries: MAX_ENTRIES
-        })
+      if (process.env.SLACK_WEBHOOK_URL) {
+        try {
+          await sendSlackNotification(submissionData)
+          console.log('Slack notification sent successfully')
+        } catch (slackError) {
+          console.error('Slack notification failed:', slackError)
+        }
       }
-    } else {
-      console.log('Google Sheets環境変数が未設定のため、ローカル処理のみ実行')
-      
-      await sendConfirmationEmailWithoutPDF(submissionData)
-      console.log('確認メール送信完了')
 
-      res.status(200).json({
+      const response = {
         success: true,
         uniqueId,
         status: 'confirmed',
-        message: 'お申し込みが完了しました（テストモード）',
-        remainingSlots: 25
-      })
+        message: 'お申し込みが完了しました',
+        remainingSlots: capacityCheck.remainingSlots - 1,
+        emailSent: emailResult.success
+      }
+
+      res.status(200).json(response)
+
+    } else {
+      await saveToFirestore(submissionData, 'over_capacity')
+      
+      const response = {
+        success: false,
+        uniqueId,
+        status: 'full_capacity',
+        message: 'ご予約満員御礼につき、ご予約がお取りできませんでした。',
+        currentEntries: capacityCheck.currentCount,
+        maxEntries: MAX_ENTRIES[formData.eventType]
+      }
+
+      res.status(400).json(response)
     }
 
   } catch (error) {
     console.error('Submit API error:', error)
+    
     res.status(500).json({ 
       error: 'サーバーエラーが発生しました',
-      details: error.message
+      details: error.message,
+      timestamp: new Date().toISOString()
     })
   }
 }

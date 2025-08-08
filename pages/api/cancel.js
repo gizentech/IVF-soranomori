@@ -1,116 +1,79 @@
-import { google } from 'googleapis'
+// pages/api/cancel.js
+import { db } from '../../lib/firebase'
+import { collection, query, where, getDocs, doc, deleteDoc, addDoc, serverTimestamp } from 'firebase/firestore'
 import nodemailer from 'nodemailer'
 
-const SPREADSHEET_ID = process.env.SPREADSHEET_ID || '1bnvH6hW7v7xq99f12w3IzNmFSFbORYh0nLMW0DbwQEs'
-
-// メール送信設定
 async function createMailTransporter() {
-  return nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'soranomori-o.sakura.ne.jp',
-    port: parseInt(process.env.EMAIL_PORT || '587'),
+  const transporterConfig = {
+    host: process.env.EMAIL_HOST,
+    port: parseInt(process.env.EMAIL_PORT),
     secure: false,
     auth: {
-      user: process.env.EMAIL_USER || 'ivf-sora-tour@azukikai.or.jp',
-      pass: process.env.EMAIL_PASSWORD || 'sora2025dx',
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASSWORD,
     },
-  })
-}
+    debug: true,
+    logger: true,
+    tls: {
+      rejectUnauthorized: false
+    }
+  }
 
-async function getGoogleAuth() {
-  const auth = new google.auth.GoogleAuth({
-    credentials: {
-      client_email: process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      private_key: process.env.GOOGLE_SERVICE_ACCOUNT_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-    },
-    scopes: ['https://www.googleapis.com/auth/spreadsheets'],
+  console.log('Email transporter config:', {
+    host: transporterConfig.host,
+    port: transporterConfig.port,
+    user: transporterConfig.auth.user,
+    hasPassword: !!transporterConfig.auth.pass
   })
-  return auth
+
+  // createTransporter → createTransport に修正
+  return nodemailer.createTransport(transporterConfig)
 }
 
 async function findAndMoveRecord(uniqueId, email, reason) {
-  const auth = await getGoogleAuth()
-  const sheets = google.sheets({ version: 'v4', auth })
-
   try {
     console.log('キャンセル対象を検索中:', { uniqueId, email })
 
-    // 1. Entryシートからデータを取得
-    const entryData = await sheets.spreadsheets.values.get({
-      spreadsheetId: SPREADSHEET_ID,
-      range: 'Entry!A:L',
-    })
+    const q = query(
+      collection(db, 'registrations'),
+      where('uniqueId', '==', uniqueId),
+      where('email', '==', email),
+      where('status', '==', 'active')
+    )
 
-    const rows = entryData.data.values || []
-    let targetRowIndex = -1
-    let targetRowData = null
+    const querySnapshot = await getDocs(q)
 
-    console.log('Entryシートの行数:', rows.length)
-
-    // 2. 予約IDとメールアドレスで該当レコードを検索
-    for (let i = 1; i < rows.length; i++) { // ヘッダー行をスキップ
-      const row = rows[i]
-      if (!row || row.length < 7) continue
-
-      const rowUniqueId = row[1] // B列：予約ID
-      const rowEmail = row[6] // G列：メールアドレス
-      
-      console.log(`行${i}: 予約ID=${rowUniqueId}, メール=${rowEmail}`)
-      
-      if (rowUniqueId === uniqueId && rowEmail === email) {
-        targetRowIndex = i + 1 // Google Sheetsは1から始まる
-        targetRowData = row
-        console.log('該当レコードを発見:', targetRowData)
-        break
-      }
-    }
-
-    if (!targetRowData) {
+    if (querySnapshot.empty) {
       throw new Error('該当する予約が見つかりません。予約IDとメールアドレスを確認してください。')
     }
 
-    // 3. Cancelシートに移動するデータを準備
-    const cancelData = [
-      ...targetRowData, // 元のデータをコピー (A-L列)
-      new Date().toISOString(), // M列: キャンセル日時
-      reason || '' // N列: キャンセル理由
-    ]
+    if (querySnapshot.size > 1) {
+      console.warn('複数の該当レコードが見つかりました')
+    }
 
-    console.log('Cancelシートに保存するデータ:', cancelData)
+    const targetDoc = querySnapshot.docs[0]
+    const targetData = targetDoc.data()
+    
+    console.log('該当レコードを発見:', targetData)
 
-    // 4. Cancelシートにデータを追加
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: 'Cancel!A:N', // 元データ(A-L) + キャンセル日時(M) + キャンセル理由(N)
-      valueInputOption: 'USER_ENTERED',
-      resource: {
-        values: [cancelData]
-      }
-    })
+    const cancelData = {
+      ...targetData,
+      cancelledAt: serverTimestamp(),
+      cancelReason: reason || '',
+      status: 'cancelled'
+    }
 
-    console.log('Cancelシートへの追加完了')
+    console.log('cancelledコレクションに保存するデータ:', cancelData)
 
-    // 5. Entryシートから該当行を削除
-    await sheets.spreadsheets.batchUpdate({
-      spreadsheetId: SPREADSHEET_ID,
-      resource: {
-        requests: [{
-          deleteDimension: {
-            range: {
-              sheetId: await getSheetId('Entry'),
-              dimension: 'ROWS',
-              startIndex: targetRowIndex - 1, // 0から始まるインデックス
-              endIndex: targetRowIndex
-            }
-          }
-        }]
-      }
-    })
+    await addDoc(collection(db, 'cancelled'), cancelData)
+    console.log('cancelledコレクションへの追加完了')
 
-    console.log('Entryシートからの削除完了')
+    await deleteDoc(doc(db, 'registrations', targetDoc.id))
+    console.log('registrationsコレクションからの削除完了')
 
     return {
       success: true,
-      data: targetRowData
+      data: targetData
     }
 
   } catch (error) {
@@ -119,63 +82,102 @@ async function findAndMoveRecord(uniqueId, email, reason) {
   }
 }
 
-async function getSheetId(sheetName) {
-  const auth = await getGoogleAuth()
-  const sheets = google.sheets({ version: 'v4', auth })
-  
+async function sendCancelConfirmationEmail(email, uniqueId, lastName, firstName, eventType) {
   try {
-    const response = await sheets.spreadsheets.get({
-      spreadsheetId: SPREADSHEET_ID,
-    })
+    console.log('キャンセルメール送信開始:', email)
     
-    const sheet = response.data.sheets.find(s => s.properties.title === sheetName)
-    return sheet ? sheet.properties.sheetId : 0
-  } catch (error) {
-    console.error('シートID取得エラー:', error)
-    return 0
-  }
-}
-
-async function sendCancelConfirmationEmail(email, uniqueId, lastName, firstName) {
-  try {
     const transporter = await createMailTransporter()
+    
+    console.log('SMTP接続をテスト中...')
+    await transporter.verify()
+    console.log('SMTP接続成功')
+    
+    const eventTitles = {
+      nursing: '第23回日本生殖看護学会学術集会 見学ツアー',
+      ivf: '第28回日本IVF学会学術集会 見学ツアー',
+      golf: '第28回日本IVF学会学術集会杯 ゴルフコンペ'
+    }
+
+    const eventTitle = eventTitles[eventType] || 'イベント'
     
     const mailOptions = {
       from: {
-        name: '第23回日本生殖看護学会学術集会 空の森クリニック見学ツアー 事務局',
-        address: 'ivf-sora-tour@azukikai.or.jp'
+        name: '空の森クリニック イベント事務局',
+        address: process.env.EMAIL_USER
       },
       to: email,
-      subject: '【空の森クリニック】見学ツアーキャンセル完了のご案内',
+      subject: `【${eventTitle}】キャンセル完了のご案内`,
+      text: `
+${lastName} ${firstName} 様
+
+${eventTitle}のキャンセル手続きが完了いたしました。
+
+■キャンセル内容
+予約ID: ${uniqueId}
+お名前: ${lastName} ${firstName}
+キャンセル日時: ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}
+
+またの機会がございましたら、ぜひご参加ください。
+
+空の森クリニック イベント事務局
+TEL: 098-998-0011
+Email: ${process.env.EMAIL_USER}
+      `,
       html: `
-        <h2>見学ツアーキャンセル完了</h2>
-        <p>${lastName} ${firstName} 様</p>
-        <p>見学ツアーのキャンセル手続きが完了いたしました。</p>
-        
-        <h3>キャンセル内容</h3>
-        <ul>
-          <li><strong>予約ID:</strong> ${uniqueId}</li>
-          <li><strong>お名前:</strong> ${lastName} ${firstName}</li>
-          <li><strong>キャンセル日時:</strong> ${new Date().toLocaleString('ja-JP')}</li>
-        </ul>
-        
-        <p>またの機会がございましたら、ぜひご参加ください。</p>
-        
-        <p>ご不明な点がございましたら、下記までお問い合わせください。</p>
-        <p>空の森クリニック 看護局<br>
-        TEL: 098-998-0011</p>
+        <div style="font-family: 'Yu Gothic', sans-serif; line-height: 1.6; color: #333;">
+          <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 32px rgba(0, 16, 77, 0.15);">
+            <div style="background: linear-gradient(135deg, #dc3545 0%, #c82333 100%); padding: 30px; text-align: center; color: white;">
+              <h1 style="margin: 0; font-size: 20px;">${eventTitle}</h1>
+              <p style="margin: 10px 0 0; font-size: 16px;">キャンセル完了のご案内</p>
+            </div>
+            
+            <div style="padding: 30px;">
+              <p><strong>${lastName} ${firstName}</strong> 様</p>
+              
+              <p>この度は、${eventTitle}のキャンセルお手続きをいただき、ありがとうございました。</p>
+              <p>キャンセル手続きが完了いたしました。</p>
+              
+              <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3 style="margin-top: 0;">キャンセル内容</h3>
+                <ul style="list-style: none; padding: 0;">
+                  <li style="margin-bottom: 8px;"><strong>予約ID:</strong> ${uniqueId}</li>
+                  <li style="margin-bottom: 8px;"><strong>お名前:</strong> ${lastName} ${firstName}</li>
+                  <li style="margin-bottom: 8px;"><strong>キャンセル日時:</strong> ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}</li>
+                </ul>
+              </div>
+              
+              <p>またの機会がございましたら、ぜひご参加ください。</p>
+              
+              <p>ご不明な点がございましたら、下記までお問い合わせください。</p>
+            </div>
+            
+            <div style="background: #f8f9fa; padding: 20px; text-align: center; color: #666;">
+              <p><strong>空の森クリニック イベント事務局</strong></p>
+              <p>TEL: 098-998-0011</p>
+              <p>Email: ${process.env.EMAIL_USER}</p>
+            </div>
+          </div>
+        </div>
       `
     }
 
-    await transporter.sendMail(mailOptions)
-    console.log('キャンセル確認メールの送信が成功しました')
+    console.log('キャンセルメール送信中...')
+    const info = await transporter.sendMail(mailOptions)
+    console.log('キャンセルメール送信成功:', info.messageId)
+    
+    return { success: true, messageId: info.messageId }
+    
   } catch (error) {
     console.error('メール送信エラー:', error)
-    throw error
+    console.log('メール送信に失敗しましたが、キャンセル処理は完了しています')
+    return { success: false, error: error.message }
   }
 }
 
 export default async function handler(req, res) {
+  console.log('=== Cancel API Called ===')
+  console.log('Method:', req.method)
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
@@ -183,37 +185,58 @@ export default async function handler(req, res) {
   try {
     const { uniqueId, email, reason } = req.body
 
+    console.log('キャンセル処理開始:', { uniqueId, email, reason })
+
+    // 基本バリデーション
     if (!uniqueId || !email) {
       return res.status(400).json({ 
         error: '予約IDとメールアドレスは必須です' 
       })
     }
 
-    console.log('キャンセル処理開始:', { uniqueId, email, reason })
+    // 予約IDの形式チェック（簡易版）
+    if (!uniqueId.startsWith('IVF-')) {
+      return res.status(400).json({ 
+        error: '予約IDの形式が正しくありません' 
+      })
+    }
 
-    // 1. EntryシートからCancelシートにレコードを移動
+    // 1. registrationsからcancelledにレコードを移動
     const result = await findAndMoveRecord(uniqueId, email, reason)
     
     if (result.success) {
       const userData = result.data
-      const lastName = userData[2] // C列：姓
-      const firstName = userData[3] // D列：名
+      const lastName = userData.lastName
+      const firstName = userData.firstName
+      const eventType = userData.eventType
 
       // 2. キャンセル確認メールを送信
-      await sendCancelConfirmationEmail(email, uniqueId, lastName, firstName)
+      const emailResult = await sendCancelConfirmationEmail(email, uniqueId, lastName, firstName, eventType)
       
       console.log('キャンセル処理完了')
       
       res.status(200).json({
         success: true,
-        message: 'キャンセル手続きが完了しました'
+        message: 'キャンセル手続きが完了しました',
+        emailSent: emailResult.success
       })
     }
 
   } catch (error) {
     console.error('Cancel API error:', error)
+    console.error('Error stack:', error.stack)
+    
+    let errorMessage = 'キャンセル処理でエラーが発生しました'
+    
+    if (error.message.includes('該当する予約が見つかりません')) {
+      errorMessage = error.message
+    } else if (error.message.includes('Firebase')) {
+      errorMessage = 'データベース接続エラーが発生しました'
+    }
+    
     res.status(500).json({ 
-      error: error.message || 'キャンセル処理でエラーが発生しました'
+      error: errorMessage,
+      details: error.message
     })
   }
 }

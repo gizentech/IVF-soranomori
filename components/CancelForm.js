@@ -1,3 +1,4 @@
+// components/CancelForm.js
 import { useState } from 'react'
 import styles from '../styles/CancelForm.module.css'
 
@@ -32,13 +33,14 @@ export default function CancelForm({ onBack }) {
 
       const result = await response.json()
 
-      if (response.ok) {
-        setMessage('キャンセル手続きが完了しました。')
+      if (response.ok && result.success) {
+        setMessage('キャンセル手続きが完了しました。確認メールをお送りしました。')
         setMessageType('success')
         setUniqueId('')
         setEmail('')
         setReason('')
       } else {
+        console.error('Cancel failed:', result)
         setMessage(result.error || 'キャンセル手続きに失敗しました。')
         setMessageType('error')
       }
@@ -57,7 +59,7 @@ export default function CancelForm({ onBack }) {
         <div className={styles.logoContainer}>
           <img src="/img/logo.webp" alt="空の森クリニック" className={styles.logo} />
         </div>
-        <h1>第23回日本生殖看護学会学術集会</h1>
+        <h1>イベントキャンセル</h1>
         <p>キャンセルフォーム</p>
       </div>
 
@@ -68,7 +70,7 @@ export default function CancelForm({ onBack }) {
             キャンセル手続き
           </h2>
           <div className={styles.description}>
-            <p>見学ツアーをキャンセルされる場合は、以下の情報を入力してください。</p>
+            <p>イベントをキャンセルされる場合は、以下の情報を入力してください。</p>
             <p><strong>注意：</strong>予約IDとメールアドレスは、お申し込み時に使用したものと完全に一致している必要があります。</p>
           </div>
 
@@ -82,12 +84,12 @@ export default function CancelForm({ onBack }) {
                 id="uniqueId"
                 value={uniqueId}
                 onChange={(e) => setUniqueId(e.target.value)}
-                placeholder="IVF-SORA****** (例: IVF-SORAXLEFBJ)"
+                placeholder="IVF-GOLFXXXXXX, IVF-TOURXXXXXX, IVF-SORAXXXXXX"
                 required
                 className={styles.input}
               />
               <small className={styles.note}>
-                例: IVF-SORAXLEFBJ (完了メールに記載されています)
+                例: IVF-GOLFN7ZDOD (完了メールに記載されています)
               </small>
             </div>
 
