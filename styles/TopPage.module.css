@@ -1,0 +1,445 @@
+/* styles/TopPage.module.css */
+.container {
+  padding: 0;
+  min-height: 100vh;
+  position: relative;
+  z-index: 10;
+  background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+}
+
+.header {
+  text-align: center;
+  padding: 80px 20px 60px;
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.header::before {
+  content: '';
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 200px;
+  height: 200px;
+  opacity: 0.15;
+  z-index: 1;
+  animation: pulse 8s ease-in-out infinite;
+}
+
+.logoContainer {
+  position: relative;
+  z-index: 2;
+  margin-bottom: 40px;
+}
+
+.logo {
+  max-height: 120px;
+  width: auto;
+  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+}
+
+.header h1 {
+  font-size: 28px;
+  margin-bottom: 16px;
+  font-weight: 700;
+  position: relative;
+  z-index: 2;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.header p {
+  font-size: 18px;
+  opacity: 0.95;
+  position: relative;
+  z-index: 2;
+  font-weight: 500;
+}
+
+.content {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 60px 20px;
+  position: relative;
+  z-index: 2;
+}
+
+.eventsGrid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 30px;
+  margin-bottom: 60px;
+}
+
+.eventLink {
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.3s ease;
+  display: block;
+  cursor: pointer;
+}
+
+.eventLink:hover {
+  transform: translateY(-4px);
+}
+
+.eventCard {
+  background: white;
+  border-radius: 16px;
+  overflow: hidden;
+  box-shadow: 0 4px 20px rgba(0, 16, 77, 0.12);
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  position: relative;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-height: 140px;
+  cursor: pointer;
+}
+
+.eventCard:hover {
+  box-shadow: 0 8px 32px rgba(0, 16, 77, 0.2);
+  border-color: var(--event-color, #00104d);
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.eventImage {
+  width: 160px;
+  height: 140px;
+  overflow: hidden;
+  position: relative;
+  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+}
+
+.eventImage img {
+  max-width: 100%;
+  max-height: 100%;
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  transition: all 0.3s ease;
+  opacity: 0.8;
+}
+
+.eventCard:hover .eventImage img {
+  transform: scale(1.05);
+  opacity: 1;
+}
+
+.eventContent {
+  padding: 25px 30px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.eventContent h3 {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--primary-color);
+  margin-bottom: 6px;
+  line-height: 1.3;
+  transition: color 0.3s ease;
+}
+
+.eventCard:hover .eventContent h3 {
+  color: var(--event-color, #00104d);
+}
+
+.eventContent h4 {
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--event-color, #00104d);
+  margin-bottom: 15px;
+  opacity: 0.8;
+  transition: opacity 0.3s ease;
+}
+
+.eventCard:hover .eventContent h4 {
+  opacity: 1;
+}
+
+.eventDetails {
+  margin-bottom: 0;
+}
+
+.eventDetails p {
+  font-size: 14px;
+  margin-bottom: 8px;
+  color: #4a5568;
+  display: flex;
+  align-items: flex-start;
+  line-height: 1.6;
+  transition: color 0.3s ease;
+}
+
+.eventCard:hover .eventDetails p {
+  color: #2d3748;
+}
+
+.eventDetails p:last-child {
+  margin-bottom: 0;
+}
+
+.eventDetails strong {
+  color: var(--primary-color);
+  font-weight: 600;
+  min-width: 90px;
+  margin-right: 12px;
+  flex-shrink: 0;
+  transition: color 0.3s ease;
+}
+
+.eventCard:hover .eventDetails strong {
+  color: var(--event-color, #00104d);
+}
+
+.footer {
+  background: var(--primary-color);
+  color: white;
+  padding: 40px 20px;
+  text-align: center;
+  margin-top: 80px;
+}
+
+.footerContent p {
+  margin-bottom: 8px;
+  font-size: 16px;
+  line-height: 1.6;
+}
+
+.footerContent p:first-child {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 16px;
+}
+
+.footerContent p:last-child {
+  margin-bottom: 0;
+  font-weight: 600;
+}
+
+/* タブレット対応 */
+@media (min-width: 768px) {
+  .header {
+    padding: 100px 40px 80px;
+  }
+  
+  .header h1 {
+    font-size: 36px;
+  }
+  
+  .header p {
+    font-size: 20px;
+  }
+  
+  .logo {
+    max-height: 140px;
+  }
+  
+  .content {
+    padding: 80px 40px;
+  }
+  
+  .eventsGrid {
+    gap: 35px;
+  }
+  
+  .eventCard {
+    min-height: 160px;
+  }
+  
+  .eventImage {
+    width: 180px;
+    height: 160px;
+    padding: 15px;
+  }
+  
+  .eventContent {
+    padding: 30px 40px;
+  }
+  
+  .eventContent h3 {
+    font-size: 22px;
+  }
+  
+  .eventContent h4 {
+    font-size: 18px;
+  }
+  
+  .eventDetails p {
+    font-size: 15px;
+  }
+  
+  .eventDetails strong {
+    min-width: 100px;
+  }
+  
+  .footer {
+    padding: 60px 40px;
+  }
+}
+
+/* デスクトップ対応（縦並び） */
+@media (min-width: 1024px) {
+  .eventsGrid {
+    gap: 40px;
+    max-width: 900px;
+    margin: 0 auto;
+  }
+  
+  .eventCard {
+    min-height: 180px;
+  }
+  
+  .eventImage {
+    width: 200px;
+    height: 180px;
+    padding: 20px;
+  }
+  
+  .eventContent {
+    padding: 35px 50px;
+  }
+  
+  .eventContent h3 {
+    font-size: 24px;
+    margin-bottom: 8px;
+  }
+  
+  .eventContent h4 {
+    font-size: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .eventDetails p {
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
+  
+  .eventDetails strong {
+    min-width: 120px;
+    margin-right: 16px;
+  }
+}
+
+/* 大型デスクトップ対応 */
+@media (min-width: 1400px) {
+  .eventsGrid {
+    max-width: 1000px;
+    gap: 50px;
+  }
+  
+  .eventCard {
+    min-height: 200px;
+  }
+  
+  .eventImage {
+    width: 220px;
+    height: 200px;
+    padding: 25px;
+  }
+  
+  .eventContent {
+    padding: 40px 60px;
+  }
+  
+  .eventContent h3 {
+    font-size: 26px;
+  }
+  
+  .eventContent h4 {
+    font-size: 22px;
+  }
+  
+  .eventDetails p {
+    font-size: 17px;
+  }
+}
+
+/* アニメーション */
+@keyframes pulse {
+  0%, 100% { 
+    opacity: 0.7; 
+    transform: translateX(-50%) scale(1); 
+  }
+  50% { 
+    opacity: 1; 
+    transform: translateX(-50%) scale(1.05); 
+  }
+}
+
+/* イベント固有の色設定 */
+.eventCard:nth-child(1) {
+  --event-color: #00104d;
+}
+
+.eventCard:nth-child(2) {
+  --event-color: #1e3a8a;
+}
+
+.eventCard:nth-child(3) {
+  --event-color: #059669;
+}
+
+/* アクセシビリティ対応 */
+@media (prefers-reduced-motion: reduce) {
+  .eventCard,
+  .eventLink,
+  .eventImage img,
+  .eventContent h3,
+  .eventContent h4,
+  .eventDetails p,
+  .eventDetails strong {
+    transition: none;
+  }
+  
+  .header::before {
+    animation: none;
+  }
+}
+
+/* フォーカス対応 */
+.eventLink:focus {
+  outline: 3px solid var(--accent-color);
+  outline-offset: 4px;
+  border-radius: 16px;
+}
+
+.eventLink:focus .eventCard {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(0, 16, 77, 0.15);
+}
+
+/* ホバー時の微細なアニメーション */
+.eventCard:hover {
+  background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+}
+
+.eventCard:hover::after {
+  content: '→';
+  position: absolute;
+  right: 30px;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 24px;
+  color: var(--event-color, #00104d);
+  opacity: 0.7;
+  transition: all 0.3s ease;
+}
+
+@media (max-width: 767px) {
+  .eventCard:hover::after {
+    right: 20px;
+    font-size: 20px;
+  }
+}
