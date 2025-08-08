@@ -2,72 +2,74 @@
 import { db } from '../../lib/firebase'
 import { collection, addDoc, query, where, getDocs, serverTimestamp } from 'firebase/firestore'
 import { sendSlackNotification } from '../../lib/slack'
-import nodemailer from 'nodemailer'
+import { sendConfirmationEmail } from '../../lib/email'
 
 const MAX_ENTRIES = {
   nursing: 30,
-  ivf: 20,
-  golf: 16 // 16組（最大64人）
+  ivf: 100, // 20人×5回
+  golf: 16  // 16人
 }
 
-async function createMailTransporter() {
-  const transporterConfig = {
-    host: process.env.EMAIL_HOST,
-    port: parseInt(process.env.EMAIL_PORT),
-    secure: false,
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD,
-    },
-    debug: true,
-    logger: true,
-    tls: {
-      rejectUnauthorized: false
-    }
-  }
-
-  return nodemailer.createTransport(transporterConfig)
-}
-
-async function checkCapacity(eventType, selectedTimeSlot = null) {
+async function checkCapacity(eventType, selectedTimeSlot = null, requestedParticipants = 1) {
   try {
-    console.log(`Checking capacity for ${eventType}, timeSlot: ${selectedTimeSlot}`)
+    console.log(`Checking capacity for ${eventType}, timeSlot: ${selectedTimeSlot}, requested: ${requestedParticipants}`)
     
     let queryConstraint
     
     if (eventType === 'ivf' && selectedTimeSlot) {
+      // IVFは各時間帯20人まで
       queryConstraint = query(
         collection(db, 'registrations'),
         where('eventType', '==', eventType),
         where('selectedTimeSlot', '==', selectedTimeSlot),
         where('status', '==', 'active')
       )
+      const snapshot = await getDocs(queryConstraint)
+      const currentCount = snapshot.size
+      const maxPerSlot = 20
+
+      console.log(`${eventType} (${selectedTimeSlot}) current count: ${currentCount}/${maxPerSlot}`)
+
+      return {
+        currentCount,
+        isAvailable: currentCount + requestedParticipants <= maxPerSlot,
+        remainingSlots: Math.max(0, maxPerSlot - currentCount)
+      }
     } else if (eventType === 'golf') {
-      // ゴルフの場合は組数で管理
+      // ゴルフは合計16人まで（個別ドキュメント数をカウント）
       queryConstraint = query(
         collection(db, 'registrations'),
         where('eventType', '==', eventType),
-        where('status', '==', 'active'),
-        where('isGroupRepresentative', '==', true) // 代表者のみカウント
+        where('status', '==', 'active')
       )
+      const snapshot = await getDocs(queryConstraint)
+      const currentCount = snapshot.size // 各参加者が個別ドキュメントなのでsizeが実際の人数
+      const maxEntries = MAX_ENTRIES[eventType]
+
+      console.log(`${eventType} current participants: ${currentCount}/${maxEntries}`)
+
+      return {
+        currentCount,
+        isAvailable: currentCount + requestedParticipants <= maxEntries,
+        remainingSlots: Math.max(0, maxEntries - currentCount)
+      }
     } else {
       queryConstraint = query(
         collection(db, 'registrations'),
         where('eventType', '==', eventType),
         where('status', '==', 'active')
       )
-    }
+      const snapshot = await getDocs(queryConstraint)
+      const currentCount = snapshot.size
+      const maxEntries = MAX_ENTRIES[eventType] || 30
 
-    const snapshot = await getDocs(queryConstraint)
-    const currentCount = snapshot.size
-    const maxEntries = MAX_ENTRIES[eventType] || 30
+      console.log(`${eventType} current count: ${currentCount}/${maxEntries}`)
 
-    console.log(`${eventType} current count: ${currentCount}/${maxEntries}`)
-
-    return {
-      currentCount,
-      isAvailable: currentCount < maxEntries,
-      remainingSlots: Math.max(0, maxEntries - currentCount)
+      return {
+        currentCount,
+        isAvailable: currentCount + requestedParticipants <= maxEntries,
+        remainingSlots: Math.max(0, maxEntries - currentCount)
+      }
     }
   } catch (error) {
     console.error('Capacity check error:', error)
@@ -80,57 +82,80 @@ async function saveToFirestore(data, status = 'active') {
     console.log('Saving to Firestore:', { ...data, status })
     
     const collectionName = status === 'active' ? 'registrations' : 'over_capacity'
-    const savedDocuments = []
 
-    if (data.eventType === 'golf' && data.participants) {
-      // ゴルフの場合：代表者＋参加者を個別に保存
-      const groupId = data.uniqueId
-      
+    if (data.eventType === 'golf') {
+      // ゴルフの場合：各参加者を個別のドキュメントとして保存
+      const savedDocuments = []
+      const groupId = data.uniqueId // グループIDとして予約IDを使用
+
       // 代表者を保存
       const representativeData = {
-        ...data,
-        isGroupRepresentative: true,
+        uniqueId: data.uniqueId,
         groupId: groupId,
-        participantType: 'representative',
+        eventType: data.eventType,
+        isRepresentative: true,
         participantNumber: 1,
-        name: data.representativeName,
-        kana: data.representativeKana,
+        lastName: data.representativeName?.split('　')[0] || data.representativeName?.split(' ')[0] || data.representativeName,
+        firstName: data.representativeName?.split('　')[1] || data.representativeName?.split(' ')[1] || '',
+        lastNameKana: data.representativeKana?.split('　')[0] || data.representativeKana?.split(' ')[0] || data.representativeKana,
+        firstNameKana: data.representativeKana?.split('　')[1] || data.representativeKana?.split(' ')[1] || '',
+        fullName: data.representativeName,
+        fullNameKana: data.representativeKana,
+        email: data.email,
+        phone: data.phone,
+        organization: data.companyName,
+        participationType: data.participationType,
+        remarks: data.remarks,
+        totalGroupSize: data.totalParticipants,
         status,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       }
-      
+
       const repDoc = await addDoc(collection(db, collectionName), representativeData)
       savedDocuments.push(repDoc.id)
       console.log(`Representative saved with ID: ${repDoc.id}`)
 
-      // 参加者を保存
-      for (let i = 0; i < data.participants.length; i++) {
-        const participant = data.participants[i]
-        if (participant.name.trim()) {
-          const participantData = {
-            ...data,
-            isGroupRepresentative: false,
-            groupId: groupId,
-            participantType: 'member',
-            participantNumber: i + 2,
-            name: participant.name,
-            kana: participant.kana,
-            // 代表者の連絡先情報を継承
-            representativeName: data.representativeName,
-            representativeEmail: data.email,
-            representativePhone: data.phone,
-            representativeCompany: data.companyName,
-            status,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
+      // 追加参加者を保存
+      if (data.participants && data.participants.length > 0) {
+        for (let i = 0; i < data.participants.length; i++) {
+          const participant = data.participants[i]
+          if (participant.name && participant.name.trim()) {
+            const participantData = {
+              uniqueId: `${data.uniqueId}-P${i + 2}`, // 個別のユニークID
+              groupId: groupId,
+              eventType: data.eventType,
+              isRepresentative: false,
+              participantNumber: i + 2,
+              lastName: participant.name?.split('　')[0] || participant.name?.split(' ')[0] || participant.name,
+              firstName: participant.name?.split('　')[1] || participant.name?.split(' ')[1] || '',
+              lastNameKana: participant.kana?.split('　')[0] || participant.kana?.split(' ')[0] || participant.kana,
+              firstNameKana: participant.kana?.split('　')[1] || participant.kana?.split(' ')[1] || '',
+              fullName: participant.name,
+              fullNameKana: participant.kana,
+              // 代表者の連絡先情報を継承
+              email: data.email,
+              phone: data.phone,
+              organization: data.companyName,
+              participationType: data.participationType,
+              remarks: data.remarks,
+              representativeName: data.representativeName,
+              representativeEmail: data.email,
+              totalGroupSize: data.totalParticipants,
+              status,
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp()
+            }
+
+            const memberDoc = await addDoc(collection(db, collectionName), participantData)
+            savedDocuments.push(memberDoc.id)
+            console.log(`Participant ${i + 2} saved with ID: ${memberDoc.id}`)
           }
-          
-          const memberDoc = await addDoc(collection(db, collectionName), participantData)
-          savedDocuments.push(memberDoc.id)
-          console.log(`Participant ${i + 2} saved with ID: ${memberDoc.id}`)
         }
       }
+
+      console.log(`Golf group saved: ${savedDocuments.length} documents created`)
+      return savedDocuments
     } else {
       // 通常の場合（nursing, ivf）
       const docData = {
@@ -141,187 +166,13 @@ async function saveToFirestore(data, status = 'active') {
       }
 
       const docRef = await addDoc(collection(db, collectionName), docData)
-      savedDocuments.push(docRef.id)
       console.log(`Document saved with ID: ${docRef.id} in collection: ${collectionName}`)
+      return [docRef.id]
     }
-    
-    return savedDocuments
   } catch (error) {
     console.error('Firestore save error:', error)
     throw new Error(`データ保存でエラーが発生しました: ${error.message}`)
   }
-}
-
-async function sendConfirmationEmail(data) {
-  try {
-    console.log('=== メール送信開始 ===')
-    console.log('送信先:', data.email)
-    
-    const transporter = await createMailTransporter()
-    
-    console.log('SMTP接続をテスト中...')
-    await transporter.verify()
-    console.log('SMTP接続成功')
-    
-    const eventTitles = {
-      nursing: '第23回日本生殖看護学会学術集会 見学ツアー',
-      ivf: '第28回日本IVF学会学術集会 見学ツアー',
-      golf: '第28回日本IVF学会学術集会杯 ゴルフコンペ'
-    }
-
-    let dateTimeInfo = ''
-    if (data.eventType === 'nursing') {
-      dateTimeInfo = '2025年10月13日（月）14:00〜'
-    } else if (data.eventType === 'ivf') {
-      dateTimeInfo = data.selectedTimeSlot || '未選択'
-    } else if (data.eventType === 'golf') {
-      dateTimeInfo = '2025年10月10日（金）7:28スタート'
-    }
-
-    let eventSpecificContent = ''
-    if (data.eventType === 'golf') {
-      let participantsList = ''
-      if (data.participants && data.participants.filter(p => p.name.trim()).length > 0) {
-        participantsList = `
-          <h4>参加者一覧</h4>
-          <ul>
-            <li>代表者: ${data.representativeName} (${data.representativeKana})</li>
-            ${data.participants
-              .filter(p => p.name.trim())
-              .map((p, i) => `<li>参加者${i + 2}: ${p.name} (${p.kana})</li>`)
-              .join('')}
-          </ul>
-        `
-      }
-      
-      eventSpecificContent = `
-        <div style="background: #fff3cd; padding: 15px; border-radius: 5px; border-left: 4px solid #ffc107; margin: 15px 0;">
-          <h4 style="margin-top: 0;">当日のスケジュール</h4>
-          <ul style="margin: 0; padding-left: 20px;">
-            <li><strong>7:00</strong> 集合（那覇ゴルフ倶楽部）</li>
-            <li><strong>7:28</strong> スタート</li>
-            <li><strong>13:00</strong> 懇親会・表彰式</li>
-          </ul>
-          <p style="margin: 10px 0 0;"><strong>参加形態:</strong> ${getParticipationTypeLabel(data.participationType)}</p>
-          <p style="margin: 10px 0 0;"><strong>参加人数:</strong> ${data.totalParticipants}名</p>
-          ${participantsList}
-        </div>
-      `
-    } else if (data.eventType === 'ivf') {
-      eventSpecificContent = `
-        <div style="background: #e3f2fd; padding: 15px; border-radius: 5px; border-left: 4px solid #2196f3; margin: 15px 0;">
-          <h4 style="margin-top: 0;">当日のご案内</h4>
-          <ul style="margin: 0; padding-left: 20px;">
-            <li>開始時間の10分前にはお越しください</li>
-            <li>感染対策にご協力ください（マスク着用必須）</li>
-            <li>動きやすい服装でお越しください</li>
-          </ul>
-        </div>
-      `
-    } else if (data.eventType === 'nursing') {
-      eventSpecificContent = `
-        <div style="background: #f3e5f5; padding: 15px; border-radius: 5px; border-left: 4px solid #9c27b0; margin: 15px 0;">
-          <h4 style="margin-top: 0;">当日のご案内</h4>
-          <ul style="margin: 0; padding-left: 20px;">
-            <li>開始時間の10分前にはお越しください</li>
-            <li>感染対策にご協力ください（マスク着用必須）</li>
-            <li>動きやすい服装でお越しください</li>
-            <li>写真撮影は指定された場所のみ可能です</li>
-          </ul>
-        </div>
-      `
-    }
-
-    // ゴルフの場合は代表者名を使用
-    const recipientName = data.eventType === 'golf' 
-      ? data.representativeName 
-      : `${data.lastName} ${data.firstName}`
-
-    const mailOptions = {
-      from: {
-        name: '空の森クリニック イベント事務局',
-        address: process.env.EMAIL_USER
-      },
-      to: data.email,
-      subject: `【${eventTitles[data.eventType]}】お申し込み完了のお知らせ`,
-      text: `
-${recipientName} 様
-
-この度は、${eventTitles[data.eventType]}にお申し込みいただき、誠にありがとうございます。
-
-■ご予約内容
-予約ID: ${data.uniqueId}
-お名前: ${recipientName}
-開催日時: ${dateTimeInfo}
-所属機関: ${data.organization || data.companyName}
-
-当日は予約ID「${data.uniqueId}」を受付でお伝えください。
-
-空の森クリニック イベント事務局
-TEL: 098-998-0011
-Email: ${process.env.EMAIL_USER}
-      `,
-      html: `
-        <div style="font-family: 'Yu Gothic', sans-serif; line-height: 1.6; color: #333;">
-          <div style="max-width: 600px; margin: 0 auto; background: white; border-radius: 16px; overflow: hidden; box-shadow: 0 8px 32px rgba(0, 16, 77, 0.15);">
-            <div style="background: linear-gradient(135deg, #00104d 0%, #1e3a8a 100%); padding: 30px; text-align: center; color: white;">
-              <h1 style="margin: 0; font-size: 20px;">${eventTitles[data.eventType]}</h1>
-              <p style="margin: 10px 0 0; font-size: 16px;">お申し込み完了のお知らせ</p>
-            </div>
-            
-            <div style="padding: 30px;">
-              <p><strong>${recipientName}</strong> 様</p>
-              
-              <p>この度は、${eventTitles[data.eventType]}にお申し込みいただき、誠にありがとうございます。</p>
-              
-              <div style="background: #f8f9fa; padding: 20px; border-radius: 8px; margin: 20px 0;">
-                <h3 style="margin-top: 0;">ご予約内容</h3>
-                <ul style="list-style: none; padding: 0;">
-                  <li style="margin-bottom: 8px;"><strong>予約ID:</strong> ${data.uniqueId}</li>
-                  <li style="margin-bottom: 8px;"><strong>お名前:</strong> ${recipientName}</li>
-                  <li style="margin-bottom: 8px;"><strong>開催日時:</strong> ${dateTimeInfo}</li>
-                  <li style="margin-bottom: 8px;"><strong>所属機関:</strong> ${data.organization || data.companyName}</li>
-                </ul>
-              </div>
-              
-              ${eventSpecificContent}
-              
-              <div style="background: #e8f5e8; padding: 15px; border-radius: 5px; border-left: 4px solid #4caf50; margin: 15px 0;">
-                <p style="margin: 0;"><strong>重要:</strong> 当日は予約ID「<strong>${data.uniqueId}</strong>」を受付でお伝えください。</p>
-              </div>
-              
-              <p>ご不明な点がございましたら、お気軽にお問い合わせください。</p>
-              <p><strong>当日お会いできますことを心よりお待ちしております。</strong></p>
-            </div>
-            
-            <div style="background: #f8f9fa; padding: 20px; text-align: center; color: #666;">
-              <p><strong>空の森クリニック イベント事務局</strong></p>
-              <p>TEL: 098-998-0011</p>
-              <p>Email: ${process.env.EMAIL_USER}</p>
-            </div>
-          </div>
-        </div>
-      `
-    }
-
-    const info = await transporter.sendMail(mailOptions)
-    console.log('メール送信成功:', info.messageId)
-
-    return { success: true, messageId: info.messageId }
-
-  } catch (error) {
-    console.error('メール送信エラー:', error)
-    return { success: false, error: error.message }
-  }
-}
-
-function getParticipationTypeLabel(participationType) {
-  const labels = {
-    'golf_only': 'ゴルフコンペのみ参加',
-    'party_only': '表彰式のみ参加',
-    'both': 'どちらも両方参加'
-  }
-  return labels[participationType] || participationType
 }
 
 function generateUniqueId(eventType) {
@@ -342,30 +193,77 @@ function generateUniqueId(eventType) {
 export default async function handler(req, res) {
   console.log('=== Submit API Called ===')
   console.log('Method:', req.method)
+  console.log('Headers:', req.headers)
+  console.log('Body type:', typeof req.body)
+  console.log('Body content:', req.body)
   
+  // CORSヘッダーを先に設定
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Accept, Authorization')
+  res.setHeader('Content-Type', 'application/json; charset=utf-8')
 
+  // OPTIONSリクエストの処理
   if (req.method === 'OPTIONS') {
-    res.status(200).end()
-    return
+    console.log('Handling OPTIONS request')
+    return res.status(200).end()
   }
   
+  // POSTメソッドのみ許可
   if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+    console.log(`Method ${req.method} not allowed`)
+    return res.status(405).json({ 
+      error: 'Method not allowed',
+      allowedMethods: ['POST'],
+      receivedMethod: req.method,
+      timestamp: new Date().toISOString()
+    })
   }
 
   try {
     const formData = req.body
-    console.log('Form data received:', formData)
+    console.log('Form data received and parsed:', formData)
 
     // 基本バリデーション
+    if (!formData || typeof formData !== 'object') {
+      console.log('Invalid form data format')
+      return res.status(400).json({ 
+        error: 'リクエストデータが無効です',
+        details: 'Request body must be valid JSON object',
+        timestamp: new Date().toISOString()
+      })
+    }
+
     if (!formData.eventType || !formData.email) {
+      console.log('Missing required fields:', { eventType: formData.eventType, email: formData.email })
       return res.status(400).json({ 
         error: '必須項目が不足しています',
-        required: ['eventType', 'email']
+        required: ['eventType', 'email'],
+        received: Object.keys(formData),
+        timestamp: new Date().toISOString()
       })
+    }
+
+    const requestedParticipants = formData.totalParticipants || 1
+    console.log('Requested participants:', requestedParticipants)
+
+    // ゴルフの場合の参加人数制限チェック
+    if (formData.eventType === 'golf') {
+      console.log('Processing golf event submission')
+      const capacityPreCheck = await checkCapacity(formData.eventType, null, requestedParticipants)
+      console.log('Pre-check capacity result:', capacityPreCheck)
+      
+      if (!capacityPreCheck.isAvailable) {
+        console.log('Capacity not available')
+        return res.status(400).json({
+          error: `申し込み可能人数を超えています。残り${capacityPreCheck.remainingSlots}名まで申し込み可能です。`,
+          availableSlots: capacityPreCheck.remainingSlots,
+          requestedParticipants,
+          currentCount: capacityPreCheck.currentCount,
+          status: 'full_capacity',
+          timestamp: new Date().toISOString()
+        })
+      }
     }
 
     const uniqueId = generateUniqueId(formData.eventType)
@@ -399,61 +297,94 @@ export default async function handler(req, res) {
 
     console.log('Submission data prepared:', submissionData)
 
-    // 定員チェック
-    const capacityCheck = await checkCapacity(formData.eventType, formData.selectedTimeSlot)
-    console.log('Capacity check result:', capacityCheck)
+    // 最終的な定員チェック
+    console.log('Performing final capacity check...')
+    const capacityCheck = await checkCapacity(formData.eventType, formData.selectedTimeSlot, requestedParticipants)
+    console.log('Final capacity check result:', capacityCheck)
 
     if (capacityCheck.isAvailable) {
       console.log(`Registration available (${capacityCheck.remainingSlots} slots remaining)`)
       
-      await saveToFirestore(submissionData, 'active')
-      console.log('Data saved to Firestore successfully')
+      console.log('Saving to Firestore...')
+      const savedDocuments = await saveToFirestore(submissionData, 'active')
+      console.log('Data saved to Firestore successfully. Document IDs:', savedDocuments)
 
-      const emailResult = await sendConfirmationEmail(submissionData)
-      console.log('Email result:', emailResult)
+      console.log('Sending confirmation email...')
+      let emailResult = { success: false, error: 'メール設定が無効です' }
+      
+      try {
+        // メール送信を試行
+        emailResult = await sendConfirmationEmail(submissionData)
+        console.log('Email result:', emailResult)
+      } catch (emailError) {
+        console.error('Email sending failed:', emailError)
+        emailResult = { success: false, error: emailError.message }
+      }
 
+      // Slack通知（オプション）
       if (process.env.SLACK_WEBHOOK_URL) {
         try {
+          console.log('Sending Slack notification...')
           await sendSlackNotification(submissionData)
           console.log('Slack notification sent successfully')
         } catch (slackError) {
           console.error('Slack notification failed:', slackError)
+          // Slackエラーは処理を止めない
         }
       }
+
+      const newRemainingSlots = capacityCheck.remainingSlots - requestedParticipants
 
       const response = {
         success: true,
         uniqueId,
         status: 'confirmed',
         message: 'お申し込みが完了しました',
-        remainingSlots: capacityCheck.remainingSlots - 1,
-        emailSent: emailResult.success
+        remainingSlots: Math.max(0, newRemainingSlots),
+        emailSent: emailResult.success,
+        emailError: emailResult.success ? null : emailResult.error,
+        savedDocuments: savedDocuments.length,
+        timestamp: new Date().toISOString()
       }
 
-      res.status(200).json(response)
+      console.log('Sending success response:', response)
+      return res.status(200).json(response)
 
     } else {
+      console.log('Capacity not available, saving to over_capacity collection')
       await saveToFirestore(submissionData, 'over_capacity')
       
       const response = {
         success: false,
         uniqueId,
         status: 'full_capacity',
-        message: 'ご予約満員御礼につき、ご予約がお取りできませんでした。',
+        message: formData.eventType === 'golf' 
+          ? `申し込み可能人数を超えています。残り${capacityCheck.remainingSlots}名まで申し込み可能です。`
+          : 'ご予約満員御礼につき、ご予約がお取りできませんでした。',
         currentEntries: capacityCheck.currentCount,
-        maxEntries: MAX_ENTRIES[formData.eventType]
+        maxEntries: MAX_ENTRIES[formData.eventType],
+        remainingSlots: capacityCheck.remainingSlots,
+        requestedParticipants,
+        timestamp: new Date().toISOString()
       }
 
-      res.status(400).json(response)
+      console.log('Sending capacity full response:', response)
+      return res.status(400).json(response)
     }
 
   } catch (error) {
-    console.error('Submit API error:', error)
+    console.error('Submit API critical error:', error)
+    console.error('Error stack:', error.stack)
     
-    res.status(500).json({ 
+    const errorResponse = {
+      success: false,
       error: 'サーバーエラーが発生しました',
       details: error.message,
+      stack: process.env.NODE_ENV === 'development' ? error.stack : undefined,
       timestamp: new Date().toISOString()
-    })
+    }
+
+    console.log('Sending error response:', errorResponse)
+    return res.status(500).json(errorResponse)
   }
 }

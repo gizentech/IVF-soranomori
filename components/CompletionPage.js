@@ -40,6 +40,21 @@ export default function CompletionPage({ uniqueId, data, onHome, eventType }) {
     }
   }
 
+  const getConfirmedParticipants = () => {
+    if (eventType === 'golf') {
+      const participants = [data.representativeName]
+      if (data.participants) {
+        data.participants.forEach(p => {
+          if (p.name.trim()) {
+            participants.push(p.name)
+          }
+        })
+      }
+      return participants
+    }
+    return [`${data.lastName} ${data.firstName}`]
+  }
+
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -60,14 +75,38 @@ export default function CompletionPage({ uniqueId, data, onHome, eventType }) {
             <div className={styles.ticket}>
               <div className={styles.ticketInfo}>
                 <p><strong>予約ID:</strong> <span className={styles.reservationId}>{uniqueId}</span></p>
-                <p><strong>お名前:</strong> {data.lastName} {data.firstName}</p>
+                <p><strong>代表者:</strong> {eventType === 'golf' ? data.representativeName : `${data.lastName} ${data.firstName}`}</p>
                 <p><strong>開催日時:</strong> {getEventDate()}</p>
-                <p><strong>所属機関:</strong> {data.organization}</p>
+                <p><strong>所属機関:</strong> {data.organization || data.companyName}</p>
                 {data.participationType && (
                   <p><strong>参加形態:</strong> {data.participationType}</p>
                 )}
+                {eventType === 'golf' && (
+                  <p><strong>参加人数:</strong> {data.totalParticipants}名</p>
+                )}
               </div>
             </div>
+          </div>
+        </div>
+
+        {/* 参加者一覧 */}
+        <div className={styles.participantsSection}>
+          <h2>
+            <img src="/img/ガーベラ.webp" alt="" className={styles.sectionIcon} />
+            予約確定者
+          </h2>
+          <div className={styles.participantsList}>
+            {getConfirmedParticipants().map((participant, index) => (
+              <div key={index} className={styles.participantItem}>
+                <span className={styles.participantNumber}>
+                  {index + 1}
+                </span>
+                <span className={styles.participantName}>
+                  {participant}
+                  {index === 0 && eventType === 'golf' && ' （代表者）'}
+                </span>
+              </div>
+            ))}
           </div>
         </div>
 

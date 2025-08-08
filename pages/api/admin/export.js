@@ -22,9 +22,9 @@ function formatArrayField(field) {
 
 function getParticipationTypeLabel(participationType) {
   const labels = {
-    'golf_and_party': 'ゴルフ＋懇親会（20,000円）',
-    'golf_only': 'ゴルフのみ（12,000円）',
-    'party_only': '懇親会のみ（8,000円）'
+    'golf_only': 'ゴルフコンペのみ参加',
+    'party_only': '表彰式のみ参加',
+    'both': 'どちらも両方参加'
   }
   return labels[participationType] || participationType || ''
 }
@@ -44,16 +44,6 @@ function getPositionLabel(position) {
   return labels[position] || position || ''
 }
 
-function getGolfExperienceLabel(exp) {
-  const labels = {
-    'beginner': '初心者（1年未満）',
-    'intermediate': '中級者（1-5年）',
-    'advanced': '上級者（5年以上）',
-    'professional': 'プロ・セミプロ'
-  }
-  return labels[exp] || exp || ''
-}
-
 function getExperienceLabel(exp) {
   const labels = {
     'under1': '1年未満',
@@ -63,18 +53,6 @@ function getExperienceLabel(exp) {
     'over10': '10年以上'
   }
   return labels[exp] || exp || ''
-}
-
-function getAverageScoreLabel(score) {
-  const labels = {
-    'under80': '80台以下',
-    '80s': '80台',
-    '90s': '90台',
-    '100s': '100台',
-    'over110': '110以上',
-    'unknown': 'わからない'
-  }
-  return labels[score] || score || ''
 }
 
 export default async function handler(req, res) {
@@ -175,7 +153,6 @@ export default async function handler(req, res) {
     console.log(`Total data count: ${allData.length}`)
 
     if (allData.length === 0) {
-      // データが0件でもCSVは生成する
       console.log('No data found, generating empty CSV')
     }
 
@@ -234,31 +211,37 @@ export default async function handler(req, res) {
       ])
     } else if (eventType === 'golf') {
       headers = [
-        '状態', '予約ID', '申込日時', '姓', '名', '姓（カナ）', '名（カナ）',
-        'メールアドレス', '電話番号', '所属機関', '役職', 'ゴルフ経験', '平均スコア',
-        '参加形態', '食事制限・アレルギー', 'その他要望', 'キャンセル日時', 'キャンセル理由'
+        '状態', '予約ID', '申込日時', '代表者名', '参加者名', '参加者カナ', 'メールアドレス', '電話番号', 
+        '所属機関', '参加形態', 'グループ人数', '参加者番号', '備考', 
+        'キャンセル日時', 'キャンセル理由'
       ]
       
-      rows = allData.map(data => [
-        data.documentStatus || '',
-        data.uniqueId || '',
-        formatTimestamp(data.createdAt),
-        data.lastName || '',
-        data.firstName || '',
-        data.lastNameKana || '',
-        data.firstNameKana || '',
-        data.email || '',
-        data.phone || '',
-        data.organization || '',
-        data.position || '',
-        getGolfExperienceLabel(data.golfExperience),
-        getAverageScoreLabel(data.averageScore),
-        getParticipationTypeLabel(data.participationType),
-        data.dietaryRestrictions || '',
-        data.specialRequests || '',
-        data.cancelledAt || '',
-        data.cancelReason || ''
-      ])
+      rows = allData.map(data => {
+        // 代表者名は常に representativeName を使用
+        const representativeName = data.representativeName || ''
+        
+        // 参加者名は各ドキュメントの fullName を使用
+        const participantName = data.fullName || `${data.lastName || ''} ${data.firstName || ''}`.trim()
+        const participantKana = data.fullNameKana || `${data.lastNameKana || ''} ${data.firstNameKana || ''}`.trim()
+
+        return [
+          data.documentStatus || '',
+          data.groupId || data.uniqueId || '', // グループIDを表示
+          formatTimestamp(data.createdAt),
+          representativeName,
+          participantName,
+          participantKana,
+          data.email || '',
+          data.phone || '',
+          data.organization || '',
+          getParticipationTypeLabel(data.participationType),
+          data.totalGroupSize || 1,
+          data.participantNumber || 1,
+          data.remarks || '',
+          data.cancelledAt || '',
+          data.cancelReason || ''
+        ]
+      })
     }
 
     console.log(`CSV headers: ${headers.length} columns`)

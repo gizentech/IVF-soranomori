@@ -1,103 +1,226 @@
 /* styles/Admin.module.css */
-.loginContainer {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  min-height: 100vh;
-  background: linear-gradient(135deg, #f0f4f8 0%, #e8f2f7 100%);
-  padding: 20px;
-}
-
-.loginForm {
-  background: white;
-  padding: 40px;
-  border-radius: 16px;
-  box-shadow: 0 8px 32px rgba(0, 16, 77, 0.15);
-  text-align: center;
-  width: 100%;
-  max-width: 400px;
-}
-
-.loginForm h2 {
-  margin-bottom: 30px;
-  color: #00104d;
-}
-
-.passwordInput {
-  width: 100%;
-  padding: 12px;
-  margin: 20px 0;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  font-size: 16px;
-  box-sizing: border-box;
-}
-
-.loginButton {
-  background: #00104d;
-  color: white;
-  padding: 12px 24px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-  width: 100%;
-  margin-top: 10px;
-}
-
-.loginButton:hover {
-  background: #1e3a8a;
-}
-
 .container {
-  max-width: 1200px;
-  margin: 0 auto;
-  padding: 20px;
   min-height: 100vh;
-  background: #f8f9fa;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  padding: 20px;
+  font-family: 'Yu Gothic', 'Hiragino Sans', sans-serif;
 }
 
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 40px;
-  padding: 20px 0;
-  border-bottom: 2px solid #eee;
-  background: white;
-  border-radius: 16px;
-  padding: 30px;
-  box-shadow: 0 4px 20px rgba(0, 16, 77, 0.08);
+  background: rgba(255, 255, 255, 0.95);
+  padding: 20px 30px;
+  border-radius: 12px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
 }
 
 .header h1 {
-  color: #00104d;
   margin: 0;
+  color: #333;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.headerButtons {
+  display: flex;
+  gap: 10px;
+}
+
+.refreshButton {
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: all 0.3s;
+}
+
+.refreshButton:hover {
+  background: #218838;
+  transform: translateY(-1px);
+}
+
+.refreshButton:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
 }
 
 .logoutButton {
   background: #dc3545;
   color: white;
-  padding: 10px 20px;
   border: none;
-  border-radius: 8px;
+  padding: 10px 20px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 14px;
+  transition: all 0.3s;
 }
 
 .logoutButton:hover {
   background: #c82333;
+  transform: translateY(-1px);
 }
 
-.loading {
-  text-align: center;
-  padding: 40px;
-  font-size: 18px;
-  color: #666;
-  background: white;
+.statsContainer {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 30px;
+  margin-bottom: 40px;
+}
+
+.statCard {
+  background: rgba(255, 255, 255, 0.95);
   border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 16, 77, 0.08);
+  padding: 25px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.statCard:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.18);
+}
+
+.cardHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
   margin-bottom: 20px;
+}
+
+.cardHeader h3 {
+  margin: 0;
+  color: #333;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.statusIndicator {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.statNumber {
+  font-size: 36px;
+  font-weight: 700;
+  color: #2c3e50;
+  text-align: center;
+  margin-bottom: 15px;
+}
+
+.progressBar {
+  width: 100%;
+  height: 8px;
+  background: #e9ecef;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 20px;
+}
+
+.progressFill {
+  height: 100%;
+  transition: width 0.5s ease;
+  border-radius: 4px;
+}
+
+.statDetails {
+  margin-bottom: 20px;
+}
+
+.statRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 0;
+  border-bottom: 1px solid #f8f9fa;
+}
+
+.statRow:last-child {
+  border-bottom: none;
+  padding-top: 12px;
+  margin-top: 8px;
+  border-top: 2px solid #e9ecef;
+}
+
+.downloadButton {
+  width: 100%;
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.downloadButton:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
+}
+
+.downloadButton:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.allDataSection {
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 16px;
+  padding: 30px;
+  text-align: center;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  margin-bottom: 30px;
+}
+
+.allDataSection h3 {
+  margin-top: 0;
+  color: #333;
+  font-size: 20px;
+}
+
+.downloadAllButton {
+  background: #6f42c1;
+  color: white;
+  border: none;
+  padding: 15px 30px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 16px;
+  font-weight: 500;
+  transition: all 0.3s;
+}
+
+.downloadAllButton:hover {
+  background: #5a2d91;
+  transform: translateY(-2px);
+}
+
+.downloadAllButton:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.lastUpdated {
+  text-align: center;
+  color: rgba(255, 255, 255, 0.8);
+  margin-top: 20px;
 }
 
 .errorMessage {
@@ -105,102 +228,102 @@
   color: #721c24;
   padding: 15px;
   border-radius: 8px;
-  margin: 15px 0;
+  margin-bottom: 20px;
   border: 1px solid #f5c6cb;
+}
+
+.loading {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  color: white;
+  z-index: 1000;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-top: 4px solid white;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 20px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* ログインフォーム */
+.loginContainer {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.loginForm {
+  background: white;
+  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
+  width: 100%;
+  max-width: 400px;
+}
+
+.loginForm h2 {
   text-align: center;
+  margin-bottom: 30px;
+  color: #333;
+}
+
+.passwordInput {
+  width: 100%;
+  padding: 15px;
+  border: 2px solid #e9ecef;
+  border-radius: 8px;
+  font-size: 16px;
+  margin-bottom: 20px;
+  transition: border-color 0.3s;
+}
+
+.passwordInput:focus {
+  outline: none;
+  border-color: #007bff;
+}
+
+.loginButton {
+  width: 100%;
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 15px;
+  border-radius: 8px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.loginButton:hover {
+  background: #0056b3;
+  transform: translateY(-1px);
 }
 
 .noDataMessage {
   text-align: center;
+  background: rgba(255, 255, 255, 0.95);
   padding: 40px;
-  background: white;
   border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 16, 77, 0.08);
-}
-
-.statsContainer {
-  margin-top: 20px;
-}
-
-.statsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-  gap: 30px;
-  margin-bottom: 40px;
-}
-
-.statCard {
-  background: white;
-  padding: 30px;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 16, 77, 0.08);
-  text-align: center;
-  border: 1px solid #eee;
-}
-
-.statCard h3 {
-  color: #00104d;
-  margin-bottom: 20px;
-  font-size: 1.2em;
-}
-
-.statNumber {
-  font-size: 2.5em;
-  font-weight: bold;
-  color: #00104d;
-  margin: 20px 0;
-}
-
-.statDetails {
-  margin: 20px 0;
-  text-align: left;
-}
-
-.statDetails p {
-  margin: 8px 0;
-  font-size: 14px;
-  color: #666;
-}
-
-.downloadButton, .downloadAllButton, .refreshButton {
-  background: #00104d;
-  color: white;
-  padding: 12px 24px;
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-size: 16px;
-  margin: 10px 5px;
-  transition: background-color 0.2s;
-}
-
-.downloadButton:hover, .downloadAllButton:hover, .refreshButton:hover {
-  background: #1e3a8a;
-}
-
-.downloadButton:disabled, .downloadAllButton:disabled, .refreshButton:disabled {
-  background: #ccc;
-  cursor: not-allowed;
-}
-
-.allDataSection, .refreshSection {
-  background: white;
-  padding: 30px;
-  border-radius: 16px;
-  box-shadow: 0 4px 20px rgba(0, 16, 77, 0.08);
-  text-align: center;
-  margin-bottom: 20px;
-  border: 1px solid #eee;
-}
-
-.allDataSection h3, .refreshSection h3 {
-  color: #00104d;
-  margin-bottom: 15px;
-}
-
-.allDataSection p {
-  color: #666;
-  margin-bottom: 20px;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.12);
 }
 
 @media (max-width: 768px) {
@@ -210,8 +333,13 @@
   
   .header {
     flex-direction: column;
-    gap: 20px;
+    gap: 15px;
     text-align: center;
+  }
+  
+  .headerButtons {
+    width: 100%;
+    justify-content: center;
   }
   
   .statsGrid {
@@ -221,14 +349,5 @@
   
   .statCard {
     padding: 20px;
-  }
-  
-  .statNumber {
-    font-size: 2em;
-  }
-  
-  .downloadButton, .downloadAllButton, .refreshButton {
-    width: 100%;
-    margin: 5px 0;
   }
 }
