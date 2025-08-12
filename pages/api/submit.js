@@ -39,8 +39,11 @@ function sanitizeDataForFirestore(data) {
 
 async function getCurrentCapacity(eventType) {
   try {
+    console.log(`\n=== Getting current capacity for ${eventType} ===`)
+    
     const { collection: firestoreCollection, getDocs, query, where } = await import('firebase/firestore')
     
+    // アクティブな登録のみをカウント
     const activeQuery = query(
       firestoreCollection(db, 'registrations'),
       where('eventType', '==', eventType),
@@ -48,17 +51,38 @@ async function getCurrentCapacity(eventType) {
     )
     
     const snapshot = await getDocs(activeQuery)
+    console.log(`Found ${snapshot.size} active documents`)
     
     // ゴルフの場合は実際の参加人数をカウント
     if (eventType === 'golf') {
       let totalParticipants = 0
+      let groupCount = 0
+      const groups = new Set()
+      
       snapshot.docs.forEach(doc => {
         const data = doc.data()
-        totalParticipants += (data.totalParticipants || 1)
+        console.log(`Document ${doc.id}:`, {
+          groupId: data.groupId,
+          participantNumber: data.participantNumber,
+          isRepresentative: data.isRepresentative,
+          totalGroupSize: data.totalGroupSize
+        })
+        
+        // グループIDでカウント（重複を避ける）
+        if (data.groupId && !groups.has(data.groupId)) {
+          groups.add(data.groupId)
+          const groupSize = data.totalGroupSize || data.totalParticipants || 1
+          totalParticipants += groupSize
+          groupCount++
+          console.log(`Group ${data.groupId}: ${groupSize} participants`)
+        }
       })
+      
+      console.log(`Total: ${totalParticipants} participants in ${groupCount} groups`)
       return totalParticipants
     }
     
+    console.log(`Total count for ${eventType}: ${snapshot.size}`)
     return snapshot.size
   } catch (error) {
     console.error('Error getting current capacity:', error)
@@ -159,10 +183,16 @@ export default async function handler(req, res) {
     const maxEntries = MAX_ENTRIES[eventType]
     const remainingSlots = Math.max(0, maxEntries - currentCount)
 
-    console.log(`Current capacity: ${currentCount}/${maxEntries}, Remaining: ${remainingSlots}`)
+    console.log(`\n=== Capacity Check ===`)
+    console.log(`Event: ${eventType}`)
+    console.log(`Current count: ${currentCount}`)
+    console.log(`Max entries: ${maxEntries}`)
+    console.log(`Remaining slots: ${remainingSlots}`)
 
     // ゴルフの場合は申し込み人数をチェック
     const requestedSlots = eventType === 'golf' ? (data.totalParticipants || 1) : 1
+    console.log(`Requested slots: ${requestedSlots}`)
+    console.log(`After registration would be: ${currentCount + requestedSlots}/${maxEntries}`)
     
     if (currentCount + requestedSlots > maxEntries) {
       console.log('Event is full, saving to over_capacity')
@@ -182,7 +212,13 @@ export default async function handler(req, res) {
         status: 'over_capacity',
         message: '申し訳ございませんが、定員に達しました。キャンセル待ちとして承りました。',
         uniqueId: overCapacityData.uniqueId,
-        remainingSlots: remainingSlots
+        remainingSlots: remainingSlots,
+        debug: {
+          currentCount,
+          maxEntries,
+          requestedSlots,
+          wouldBeTotal: currentCount + requestedSlots
+        }
       })
     }
 
@@ -319,7 +355,14 @@ export default async function handler(req, res) {
       emailSent,
       emailError,
       savedDocuments,
-      timestamp: new Date().toISOString()
+      timestamp: new Date().toISOString(),
+      debug: {
+        eventType,
+        currentCountBefore: currentCount,
+        maxEntries,
+        requestedSlots,
+        finalRemainingSlots
+      }
     }
 
     console.log('Final response:', response)

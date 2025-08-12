@@ -1,5 +1,5 @@
 // pages/api/send-email.js
-import nodemailer from 'nodemailer'
+import * as nodemailer from 'nodemailer'
 
 export default async function handler(req, res) {
   // CORS設定
@@ -42,8 +42,8 @@ export default async function handler(req, res) {
       })
     }
 
-    // Gmail SMTP設定
-    const transporter = nodemailer.createTransporter({
+    // Gmail SMTP設定（createTransport に修正）
+    const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,

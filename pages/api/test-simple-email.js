@@ -1,4 +1,4 @@
-// pages/api/test-simple-email.js (新規作成)
+// pages/api/test-simple-email.js
 import nodemailer from 'nodemailer'
 
 export default async function handler(req, res) {
@@ -12,8 +12,8 @@ export default async function handler(req, res) {
     const { email } = req.body
     const testEmail = email || 'dx.soranomori@gmail.com'
 
-    // Gmail SMTP設定
-    const transporter = nodemailer.createTransporter({
+    // Gmail SMTP設定（createTransport に修正）
+    const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
