@@ -9,14 +9,14 @@
     "pages/api/test-simple-email.js": {
       "maxDuration": 30
     },
+    "pages/api/test-email.js": {
+      "maxDuration": 30
+    },
     "pages/api/cancel.js": {
       "maxDuration": 30
     },
     "pages/api/admin/stats.js": {
       "maxDuration": 30
     }
-  },
-  "env": {
-    "EMAIL_HOST": "smtp.gmail.com"
   }
 }

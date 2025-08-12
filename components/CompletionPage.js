@@ -41,18 +41,40 @@ export default function CompletionPage({ uniqueId, data, onHome, eventType }) {
   }
 
   const getConfirmedParticipants = () => {
+    console.log('getConfirmedParticipants called with eventType:', eventType)
+    console.log('data:', data)
+    
     if (eventType === 'golf') {
-      const participants = [data.representativeName]
-      if (data.participants) {
-        data.participants.forEach(p => {
-          if (p.name.trim()) {
-            participants.push(p.name)
+      const participants = [
+        {
+          name: data.representativeName,
+          isRepresentative: true
+        }
+      ]
+      
+      // participantsが配列として存在する場合
+      if (data.participants && Array.isArray(data.participants)) {
+        console.log('Processing participants array:', data.participants)
+        data.participants.forEach((participant, index) => {
+          if (participant.name && participant.name.trim()) {
+            participants.push({
+              name: participant.name,
+              kana: participant.kana,
+              participantNumber: participant.participantNumber || (index + 2),
+              isRepresentative: false
+            })
           }
         })
       }
+      
+      console.log('Final participants array:', participants)
       return participants
     }
-    return [`${data.lastName} ${data.firstName}`]
+    
+    return [{
+      name: `${data.lastName} ${data.firstName}`,
+      isRepresentative: true
+    }]
   }
 
   return (
@@ -99,8 +121,9 @@ export default function CompletionPage({ uniqueId, data, onHome, eventType }) {
                   {index + 1}
                 </span>
                 <span className={styles.participantName}>
-                  {participant}
-                  {index === 0 && eventType === 'golf' && ' （代表者）'}
+                  {participant.name}
+                  {participant.kana && ` (${participant.kana})`}
+                  {participant.isRepresentative && ' （代表者）'}
                 </span>
               </div>
             ))}

@@ -48,6 +48,17 @@ async function getCurrentCapacity(eventType) {
     )
     
     const snapshot = await getDocs(activeQuery)
+    
+    // ゴルフの場合は実際の参加人数をカウント
+    if (eventType === 'golf') {
+      let totalParticipants = 0
+      snapshot.docs.forEach(doc => {
+        const data = doc.data()
+        totalParticipants += (data.totalParticipants || 1)
+      })
+      return totalParticipants
+    }
+    
     return snapshot.size
   } catch (error) {
     console.error('Error getting current capacity:', error)
@@ -150,7 +161,10 @@ export default async function handler(req, res) {
 
     console.log(`Current capacity: ${currentCount}/${maxEntries}, Remaining: ${remainingSlots}`)
 
-    if (currentCount >= maxEntries) {
+    // ゴルフの場合は申し込み人数をチェック
+    const requestedSlots = eventType === 'golf' ? (data.totalParticipants || 1) : 1
+    
+    if (currentCount + requestedSlots > maxEntries) {
       console.log('Event is full, saving to over_capacity')
       
       const overCapacityData = sanitizeDataForFirestore({
@@ -168,7 +182,7 @@ export default async function handler(req, res) {
         status: 'over_capacity',
         message: '申し訳ございませんが、定員に達しました。キャンセル待ちとして承りました。',
         uniqueId: overCapacityData.uniqueId,
-        remainingSlots: 0
+        remainingSlots: remainingSlots
       })
     }
 
@@ -182,7 +196,9 @@ export default async function handler(req, res) {
       const totalParticipants = data.totalParticipants || (data.participants ? data.participants.length + 1 : 1)
 
       console.log(`Processing golf registration for ${totalParticipants} participants`)
+      console.log('Participants data:', data.participants)
 
+      // 代表者のドキュメントを作成
       const representativeData = sanitizeDataForFirestore({
         eventType: 'golf',
         groupId,
@@ -196,12 +212,13 @@ export default async function handler(req, res) {
         lastName: data.lastName || '',
         firstNameKana: data.firstNameKana || '',
         lastNameKana: data.lastNameKana || '',
-        fullName: `${data.lastName || ''} ${data.firstName || ''}`.trim(),
-        fullNameKana: `${data.lastNameKana || ''} ${data.firstNameKana || ''}`.trim(),
+        fullName: data.representativeName || `${data.lastName || ''} ${data.firstName || ''}`.trim(),
+        fullNameKana: data.representativeKana || `${data.lastNameKana || ''} ${data.firstNameKana || ''}`.trim(),
         email: data.email || '',
         phone: data.phone || '',
         organization: data.organization || '',
         companyName: data.companyName || '',
+        totalParticipants: totalParticipants,
         participationType: data.participationType || '',
         remarks: data.remarks || '',
         specialRequests: data.specialRequests || '',
@@ -215,43 +232,47 @@ export default async function handler(req, res) {
       savedDocuments++
       uniqueId = groupId
 
+      // 追加参加者のドキュメントを作成
       if (data.participants && Array.isArray(data.participants) && data.participants.length > 0) {
-        console.log(`Processing ${data.participants.length} participants`)
+        console.log(`Processing ${data.participants.length} additional participants`)
         
         for (let i = 0; i < data.participants.length; i++) {
           const participant = data.participants[i]
-          const participantUniqueId = `${groupId}-P${i + 2}`
+          if (participant.name && participant.name.trim()) {
+            const participantUniqueId = `${groupId}-P${i + 2}`
 
-          const participantData = sanitizeDataForFirestore({
-            eventType: 'golf',
-            groupId,
-            uniqueId: participantUniqueId,
-            participantNumber: i + 2,
-            isRepresentative: false,
-            totalGroupSize: totalParticipants,
-            representativeName: data.representativeName || '',
-            representativeEmail: data.email || '',
-            firstName: participant.firstName || '',
-            lastName: participant.lastName || '',
-            firstNameKana: participant.firstNameKana || '',
-            lastNameKana: participant.lastNameKana || '',
-            fullName: `${participant.lastName || ''} ${participant.firstName || ''}`.trim(),
-            fullNameKana: `${participant.lastNameKana || ''} ${participant.firstNameKana || ''}`.trim(),
-            email: participant.email || '',
-            phone: participant.phone || '',
-            organization: participant.organization || '',
-            companyName: data.companyName || '',
-            participationType: data.participationType || '',
-            remarks: data.remarks || '',
-            specialRequests: data.specialRequests || '',
-            status: 'active',
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp()
-          })
+            const participantData = sanitizeDataForFirestore({
+              eventType: 'golf',
+              groupId,
+              uniqueId: participantUniqueId,
+              participantNumber: i + 2,
+              isRepresentative: false,
+              totalGroupSize: totalParticipants,
+              representativeName: data.representativeName || '',
+              representativeEmail: data.email || '',
+              firstName: participant.name.split(' ')[1] || participant.name.split('　')[1] || '',
+              lastName: participant.name.split(' ')[0] || participant.name.split('　')[0] || participant.name,
+              firstNameKana: participant.kana ? (participant.kana.split(' ')[1] || participant.kana.split('　')[1] || '') : '',
+              lastNameKana: participant.kana ? (participant.kana.split(' ')[0] || participant.kana.split('　')[0] || participant.kana) : '',
+              fullName: participant.name,
+              fullNameKana: participant.kana || '',
+              email: data.email || '', // 代表者のメールアドレスを使用
+              phone: data.phone || '',
+              organization: data.organization || '',
+              companyName: data.companyName || '',
+              totalParticipants: totalParticipants,
+              participationType: data.participationType || '',
+              remarks: data.remarks || '',
+              specialRequests: data.specialRequests || '',
+              status: 'active',
+              createdAt: serverTimestamp(),
+              updatedAt: serverTimestamp()
+            })
 
-          console.log(`Participant ${i + 1} data to save:`, participantData)
-          await addDoc(collection(db, 'registrations'), participantData)
-          savedDocuments++
+            console.log(`Participant ${i + 1} data to save:`, participantData)
+            await addDoc(collection(db, 'registrations'), participantData)
+            savedDocuments++
+          }
         }
       }
 
@@ -287,7 +308,7 @@ export default async function handler(req, res) {
       console.error('Email sending failed:', emailResult.error)
     }
 
-    const finalRemainingSlots = Math.max(0, maxEntries - currentCount - savedDocuments)
+    const finalRemainingSlots = Math.max(0, maxEntries - currentCount - requestedSlots)
 
     const response = {
       success: true,
@@ -295,22 +316,22 @@ export default async function handler(req, res) {
       status: 'confirmed',
       message: 'お申し込みが完了しました',
       remainingSlots: finalRemainingSlots,
-     emailSent,
-     emailError,
-     savedDocuments,
-     timestamp: new Date().toISOString()
-   }
+      emailSent,
+      emailError,
+      savedDocuments,
+      timestamp: new Date().toISOString()
+    }
 
-   console.log('Final response:', response)
-   return res.status(200).json(response)
+    console.log('Final response:', response)
+    return res.status(200).json(response)
 
- } catch (error) {
-   console.error('Submit API error:', error)
-   console.error('Error stack:', error.stack)
-   return res.status(500).json({
-     error: 'Internal server error',
-     message: error.message,
-     timestamp: new Date().toISOString()
-   })
- }
+  } catch (error) {
+    console.error('Submit API error:', error)
+    console.error('Error stack:', error.stack)
+    return res.status(500).json({
+      error: 'Internal server error',
+      message: error.message,
+      timestamp: new Date().toISOString()
+    })
+  }
 }

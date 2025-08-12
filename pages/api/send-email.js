@@ -1,4 +1,6 @@
 // pages/api/send-email.js
+import nodemailer from 'nodemailer'
+
 export default async function handler(req, res) {
   // CORS設定
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -27,6 +29,7 @@ export default async function handler(req, res) {
     console.log('EMAIL_HOST exists:', !!process.env.EMAIL_HOST)
     console.log('EMAIL_USER exists:', !!process.env.EMAIL_USER)
     console.log('EMAIL_PASSWORD exists:', !!process.env.EMAIL_PASSWORD)
+    console.log('EMAIL_USER value:', process.env.EMAIL_USER)
 
     if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
       return res.status(500).json({ 
@@ -39,17 +42,9 @@ export default async function handler(req, res) {
       })
     }
 
-    // 動的インポートでnodemailerを読み込み
-    console.log('Importing nodemailer...')
-    const nodemailer = await import('nodemailer')
-    console.log('nodemailer imported:', typeof nodemailer)
-    console.log('createTransporter:', typeof nodemailer.default?.createTransporter)
-
-    // デフォルトエクスポートを使用
-    const transporter = nodemailer.default.createTransporter({
-      host: 'smtp.gmail.com',
-      port: 587,
-      secure: false,
+    // Gmail SMTP設定
+    const transporter = nodemailer.createTransporter({
+      service: 'gmail',
       auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD,
@@ -87,6 +82,8 @@ export default async function handler(req, res) {
     }
 
     console.log('Sending email to:', to)
+    console.log('Email subject:', subject)
+    
     const info = await transporter.sendMail(mailOptions)
     
     console.log('✅ Email sent successfully')

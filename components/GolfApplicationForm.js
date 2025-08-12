@@ -211,14 +211,18 @@ export default function GolfApplicationForm({ onSubmit, onBack, initialData = {}
     }
     
     if (validateForm()) {
-      const validParticipants = participants.filter(p => p.name.trim())
+      // 有効な参加者のみをフィルタリング
+      const validParticipants = participants.filter(p => p.name.trim()).map((participant, index) => ({
+        name: participant.name,
+        kana: participant.kana,
+        participantNumber: index + 2
+      }))
       
       const submissionData = {
         ...formData,
         participants: validParticipants,
         totalParticipants: totalParticipants,
-        // 参加項目を削除し、デフォルト値を設定
-        participationType: 'both', // 両方参加をデフォルトに
+        participationType: 'both',
         lastName: formData.representativeName?.split('　')[0] || formData.representativeName?.split(' ')[0] || formData.representativeName,
         firstName: formData.representativeName?.split('　')[1] || formData.representativeName?.split(' ')[1] || '',
         lastNameKana: formData.representativeKana?.split('　')[0] || formData.representativeKana?.split(' ')[0] || formData.representativeKana,
@@ -227,6 +231,7 @@ export default function GolfApplicationForm({ onSubmit, onBack, initialData = {}
         specialRequests: formData.remarks
       }
       
+      console.log('Submission data:', submissionData) // デバッグ用
       onSubmit(submissionData)
     }
     setLoading(false)
