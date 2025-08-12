@@ -48,7 +48,7 @@ export default function GolfGuidePage({ onNext }) {
           </h2>
           <p>拝啓　残暑厳しいおりから、皆様ますますご清栄のこととお喜び申し上げます。</p>
           <p>さてこの度、平素よりお世話になっている皆様との交流を深めたく、第28回日本IVF学会学術集会杯ゴルフコンペを開催する運びとなりました。</p>
-          <p>コンペの後には表彰式を兼ねた懇親会も予定しており、特別な賞品を多数ご用意致しております。</p>
+          <p>コンペの後には表彰式を予定しており、特別な賞品を多数ご用意致しております。</p>
           <p>ご多忙のところ誠に恐縮ではございますが、皆様奮ってご参加をお願い申し上げます。</p>
           <div className={styles.organizer}>
             <p><strong>2025年8月10日</strong></p>
@@ -63,12 +63,13 @@ export default function GolfGuidePage({ onNext }) {
             <img src="/img/landscape.webp" alt="" className={styles.sectionIcon} />
             開催概要
           </h2>
-          <p><strong>開催日時:</strong> 2025年10月10日（金曜日）午前7時28分スタート</p>
-          <p><strong>開催場所:</strong> 那覇ゴルフ倶楽部</p>
-          <p><strong>住所:</strong> 沖縄県島尻郡八重瀬町字富盛2270</p>
-          <p><strong>集合時間:</strong> 午前7時</p>
-          <p><strong>集合場所:</strong> 那覇ゴルフ倶楽部コース出入り口前</p>
-          <p><strong>定員:</strong> 16名</p>
+          <p><strong>開催日時：</strong> 2025年10月10日（金曜日）</p>
+          <p><strong>集合場所：</strong> 那覇ゴルフ倶楽部コース出入り口前</p>
+          <p><strong>集合時間：</strong> 午前7時</p>
+          <p><strong>開始時間：</strong> 午前7時28分スタート（アウトコース）</p>
+          <p><strong>開催場所：</strong> 那覇ゴルフ倶楽部</p>
+          <p><strong>会場住所：</strong> 沖縄県島尻郡八重瀬町字富盛2270</p>
+          <p><strong>実施定員：</strong> 16名</p>
         </div>
 
         <div className={styles.section}>
@@ -76,21 +77,20 @@ export default function GolfGuidePage({ onNext }) {
             <img src="/img/月と星.webp" alt="" className={styles.sectionIcon} />
             参加費用・競技方式
           </h2>
-          <p><strong>プレーフィー:</strong> 12,000円</p>
-          <p><strong>会費（景品代・懇親会）:</strong> 8,000円</p>
-          <p><strong>合計:</strong> 20,000円</p>
-          <p><strong>競技方式:</strong> ペリア方式</p>
-          <p>（ゴルフ初心者の方もお楽しみいただける競技方式です）</p>
+          <p><strong>参加費用：</strong> 23,700円</p>
+          <p>（プレーフィー：18,700円 + 会費（景品代）： 5,000円）</p>
+
+          <p><strong>競技方式：</strong> ダブルペリア方式</p>
         </div>
 
         <div className={styles.section}>
           <h2>
             <img src="/img/鳥の雲.webp" alt="" className={styles.sectionIcon} />
-            懇親会について
+            表彰式について
           </h2>
-          <p><strong>開催時間:</strong> 午後1時より</p>
-          <p><strong>会場:</strong> 那覇ゴルフ倶楽部レストラン</p>
-          <p>表彰式を兼ねた懇親会を開催いたします。特別な賞品を多数ご用意しております。</p>
+          <p><strong>開催時間：</strong> 午後1時より</p>
+          <p><strong>会　　場：</strong> 那覇ゴルフ倶楽部レストラン</p>
+          <p>表彰式を開催いたします。特別な賞品を多数ご用意しております。</p>
         </div>
 
         <div className={styles.section}>

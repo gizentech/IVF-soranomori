@@ -14,15 +14,6 @@ export default function GolfConfirmationForm({ data, onConfirm, onBack }) {
     }
   }
 
-  const getParticipationTypeLabel = (type) => {
-    const labels = {
-      'golf_only': 'ゴルフコンペのみ参加',
-      'party_only': '表彰式のみ参加',
-      'both': 'どちらも両方参加'
-    }
-    return labels[type] || type
-  }
-
   return (
     <div className={styles.container}>
       <div className={styles.header}>
@@ -63,10 +54,6 @@ export default function GolfConfirmationForm({ data, onConfirm, onBack }) {
           <div className={styles.confirmationItem}>
             <span className={styles.label}>開催日</span>
             <span className={styles.value}>2025年10月10日（金）7:28スタート</span>
-          </div>
-          <div className={styles.confirmationItem}>
-            <span className={styles.label}>参加項目</span>
-            <span className={styles.value}>{getParticipationTypeLabel(data.participationType)}</span>
           </div>
           
           {/* 追加参加者 */}

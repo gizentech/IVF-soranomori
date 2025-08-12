@@ -20,15 +20,6 @@ function formatArrayField(field) {
   return field || ''
 }
 
-function getParticipationTypeLabel(participationType) {
-  const labels = {
-    'golf_only': 'ゴルフコンペのみ参加',
-    'party_only': '表彰式のみ参加',
-    'both': 'どちらも両方参加'
-  }
-  return labels[participationType] || participationType || ''
-}
-
 function getPositionLabel(position) {
   const labels = {
     'doctor': '医師',
@@ -136,148 +127,147 @@ export default async function handler(req, res) {
     try {
       console.log('Fetching over capacity registrations...')
       const overCapacityQuery = query(
-        collection(db, 'over_capacity'),
-        where('eventType', '==', eventType)
-      )
-      const overCapacitySnapshot = await getDocs(overCapacityQuery)
-      console.log(`Found ${overCapacitySnapshot.size} over capacity registrations`)
+       collection(db, 'over_capacity'),
+       where('eventType', '==', eventType)
+     )
+     const overCapacitySnapshot = await getDocs(overCapacityQuery)
+     console.log(`Found ${overCapacitySnapshot.size} over capacity registrations`)
 
-      overCapacitySnapshot.docs.forEach(doc => {
-        const data = doc.data()
-        allData.push({ ...data, documentStatus: '定員超過' })
-      })
-    } catch (error) {
-      console.error('Error fetching over capacity registrations:', error)
-    }
+     overCapacitySnapshot.docs.forEach(doc => {
+       const data = doc.data()
+       allData.push({ ...data, documentStatus: '定員超過' })
+     })
+   } catch (error) {
+     console.error('Error fetching over capacity registrations:', error)
+   }
 
-    console.log(`Total data count: ${allData.length}`)
+   console.log(`Total data count: ${allData.length}`)
 
-    if (allData.length === 0) {
-      console.log('No data found, generating empty CSV')
-    }
+   if (allData.length === 0) {
+     console.log('No data found, generating empty CSV')
+   }
 
-    // CSVヘッダーとデータを作成
-    let headers = []
-    let rows = []
+   // CSVヘッダーとデータを作成
+   let headers = []
+   let rows = []
 
-    if (eventType === 'nursing') {
-      headers = [
-        '状態', '予約ID', '申込日時', '姓', '名', '姓（カナ）', '名（カナ）',
-        'メールアドレス', '電話番号', '所属機関', '職種・役職', '特別な配慮事項',
-        'キャンセル日時', 'キャンセル理由'
-      ]
-      
-      rows = allData.map(data => [
-        data.documentStatus || '',
-        data.uniqueId || '',
-        formatTimestamp(data.createdAt),
-        data.lastName || '',
-        data.firstName || '',
-        data.lastNameKana || '',
-        data.firstNameKana || '',
-        data.email || '',
-        data.phone || '',
-        data.organization || '',
-        data.position || '',
-        data.specialRequests || '',
-        data.cancelledAt || '',
-        data.cancelReason || ''
-      ])
-    } else if (eventType === 'ivf') {
-      headers = [
-        '状態', '予約ID', '申込日時', '希望時間帯', '姓', '名', '姓（カナ）', '名（カナ）',
-        'メールアドレス', '電話番号', '所属機関', '職種・役職', '経験年数', '関心分野',
-        '特別な配慮事項', 'キャンセル日時', 'キャンセル理由'
-      ]
-      
-      rows = allData.map(data => [
-        data.documentStatus || '',
-        data.uniqueId || '',
-        formatTimestamp(data.createdAt),
-        data.selectedTimeSlot || '',
-        data.lastName || '',
-        data.firstName || '',
-        data.lastNameKana || '',
-        data.firstNameKana || '',
-        data.email || '',
-        data.phone || '',
-        data.organization || '',
-        getPositionLabel(data.position),
-        getExperienceLabel(data.experience),
-        formatArrayField(data.interests),
-        data.specialRequests || '',
-        data.cancelledAt || '',
-        data.cancelReason || ''
-      ])
-    } else if (eventType === 'golf') {
-      headers = [
-        '状態', '予約ID', '申込日時', '代表者名', '参加者名', '参加者カナ', 'メールアドレス', '電話番号', 
-        '所属機関', '参加形態', 'グループ人数', '参加者番号', '備考', 
-        'キャンセル日時', 'キャンセル理由'
-      ]
-      
-      rows = allData.map(data => {
-        // 代表者名は常に representativeName を使用
-        const representativeName = data.representativeName || ''
-        
-        // 参加者名は各ドキュメントの fullName を使用
-        const participantName = data.fullName || `${data.lastName || ''} ${data.firstName || ''}`.trim()
-        const participantKana = data.fullNameKana || `${data.lastNameKana || ''} ${data.firstNameKana || ''}`.trim()
+   if (eventType === 'nursing') {
+     headers = [
+       '状態', '予約ID', '申込日時', '姓', '名', '姓（カナ）', '名（カナ）',
+       'メールアドレス', '電話番号', '所属機関', '職種・役職', '特別な配慮事項',
+       'キャンセル日時', 'キャンセル理由'
+     ]
+     
+     rows = allData.map(data => [
+       data.documentStatus || '',
+       data.uniqueId || '',
+       formatTimestamp(data.createdAt),
+       data.lastName || '',
+       data.firstName || '',
+       data.lastNameKana || '',
+       data.firstNameKana || '',
+       data.email || '',
+       data.phone || '',
+       data.organization || '',
+       data.position || '',
+       data.specialRequests || '',
+       data.cancelledAt || '',
+       data.cancelReason || ''
+     ])
+   } else if (eventType === 'ivf') {
+     headers = [
+       '状態', '予約ID', '申込日時', '希望時間帯', '姓', '名', '姓（カナ）', '名（カナ）',
+       'メールアドレス', '電話番号', '所属機関', '職種・役職', '経験年数', '関心分野',
+       '特別な配慮事項', 'キャンセル日時', 'キャンセル理由'
+     ]
+     
+     rows = allData.map(data => [
+       data.documentStatus || '',
+       data.uniqueId || '',
+       formatTimestamp(data.createdAt),
+       data.selectedTimeSlot || '',
+       data.lastName || '',
+       data.firstName || '',
+       data.lastNameKana || '',
+       data.firstNameKana || '',
+       data.email || '',
+       data.phone || '',
+       data.organization || '',
+       getPositionLabel(data.position),
+       getExperienceLabel(data.experience),
+       formatArrayField(data.interests),
+       data.specialRequests || '',
+       data.cancelledAt || '',
+       data.cancelReason || ''
+     ])
+   } else if (eventType === 'golf') {
+     headers = [
+       '状態', '予約ID', '申込日時', '代表者名', '参加者名', '参加者カナ', 'メールアドレス', '電話番号', 
+       '所属機関', 'グループ人数', '参加者番号', '備考', 
+       'キャンセル日時', 'キャンセル理由'
+     ]
+     
+     rows = allData.map(data => {
+       // 代表者名は常に representativeName を使用
+       const representativeName = data.representativeName || ''
+       
+       // 参加者名は各ドキュメントの fullName を使用
+       const participantName = data.fullName || `${data.lastName || ''} ${data.firstName || ''}`.trim()
+       const participantKana = data.fullNameKana || `${data.lastNameKana || ''} ${data.firstNameKana || ''}`.trim()
 
-        return [
-          data.documentStatus || '',
-          data.groupId || data.uniqueId || '', // グループIDを表示
-          formatTimestamp(data.createdAt),
-          representativeName,
-          participantName,
-          participantKana,
-          data.email || '',
-          data.phone || '',
-          data.organization || '',
-          getParticipationTypeLabel(data.participationType),
-          data.totalGroupSize || 1,
-          data.participantNumber || 1,
-          data.remarks || '',
-          data.cancelledAt || '',
-          data.cancelReason || ''
-        ]
-      })
-    }
+       return [
+         data.documentStatus || '',
+         data.groupId || data.uniqueId || '', // グループIDを表示
+         formatTimestamp(data.createdAt),
+         representativeName,
+         participantName,
+         participantKana,
+         data.email || '',
+         data.phone || '',
+         data.organization || data.companyName || '',
+         data.totalGroupSize || 1,
+         data.participantNumber || 1,
+         data.remarks || '',
+         data.cancelledAt || '',
+         data.cancelReason || ''
+       ]
+     })
+   }
 
-    console.log(`CSV headers: ${headers.length} columns`)
-    console.log(`CSV rows: ${rows.length} rows`)
+   console.log(`CSV headers: ${headers.length} columns`)
+   console.log(`CSV rows: ${rows.length} rows`)
 
-    // CSV形式に変換
-    const csvContent = [headers, ...rows]
-      .map(row => row.map(field => {
-        // フィールドをエスケープ
-        const fieldStr = String(field || '').replace(/"/g, '""')
-        return `"${fieldStr}"`
-      }).join(','))
-      .join('\n')
+   // CSV形式に変換
+   const csvContent = [headers, ...rows]
+     .map(row => row.map(field => {
+       // フィールドをエスケープ
+       const fieldStr = String(field || '').replace(/"/g, '""')
+       return `"${fieldStr}"`
+     }).join(','))
+     .join('\n')
 
-    // BOMを追加（Excelで文字化けを防ぐ）
-    const csvWithBOM = '\uFEFF' + csvContent
+   // BOMを追加（Excelで文字化けを防ぐ）
+   const csvWithBOM = '\uFEFF' + csvContent
 
-    console.log('CSV generated successfully, setting headers...')
+   console.log('CSV generated successfully, setting headers...')
 
-    // レスポンスヘッダーを設定
-    res.setHeader('Content-Type', 'text/csv; charset=utf-8')
-    res.setHeader('Content-Disposition', `attachment; filename="${eventType}_registrations_${new Date().toISOString().split('T')[0]}.csv"`)
-    res.setHeader('Content-Length', Buffer.byteLength(csvWithBOM, 'utf8'))
-    
-    console.log('Sending CSV response...')
-    res.status(200).send(csvWithBOM)
+   // レスポンスヘッダーを設定
+   res.setHeader('Content-Type', 'text/csv; charset=utf-8')
+   res.setHeader('Content-Disposition', `attachment; filename="${eventType}_registrations_${new Date().toISOString().split('T')[0]}.csv"`)
+   res.setHeader('Content-Length', Buffer.byteLength(csvWithBOM, 'utf8'))
+   
+   console.log('Sending CSV response...')
+   res.status(200).send(csvWithBOM)
 
-  } catch (error) {
-    console.error('CSV export error:', error)
-    console.error('Error stack:', error.stack)
-    
-    // エラー発生時はJSONで返す
-    res.status(500).json({ 
-      error: 'CSV出力に失敗しました',
-      details: error.message,
-      timestamp: new Date().toISOString()
-    })
-  }
+ } catch (error) {
+   console.error('CSV export error:', error)
+   console.error('Error stack:', error.stack)
+   
+   // エラー発生時はJSONで返す
+   res.status(500).json({ 
+     error: 'CSV出力に失敗しました',
+     details: error.message,
+     timestamp: new Date().toISOString()
+   })
+ }
 }

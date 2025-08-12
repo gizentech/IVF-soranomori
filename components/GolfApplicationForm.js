@@ -20,7 +20,6 @@ export default function GolfApplicationForm({ onSubmit, onBack, initialData = {}
     timestamp: null
   })
   const [loading, setLoading] = useState(false)
-  const [lastUpdate, setLastUpdate] = useState(null)
 
   // 定員状況を取得
   useEffect(() => {
@@ -43,19 +42,17 @@ export default function GolfApplicationForm({ onSubmit, onBack, initialData = {}
       if (response.ok) {
         const data = await response.json()
         
-        // 計算の再検証
         const expectedRemaining = Math.max(0, data.maxEntries - data.currentCount)
         
         setCapacityInfo({
           currentCount: data.currentCount || 0,
           maxEntries: data.maxEntries || 16,
-          remainingSlots: expectedRemaining, // 修正された値を使用
-          isAvailable: expectedRemaining > 0, // 修正された値を使用
+          remainingSlots: expectedRemaining,
+          isAvailable: expectedRemaining > 0,
           hasError: data.hasError || false,
           errorMessage: data.errorMessage || null,
           timestamp: data.timestamp
         })
-        setLastUpdate(new Date().toLocaleTimeString())
       } else {
         throw new Error(`HTTP ${response.status}: ${response.statusText}`)
       }
@@ -109,17 +106,6 @@ export default function GolfApplicationForm({ onSubmit, onBack, initialData = {}
           placeholder: "example@example.com"
         },
         {
-          name: "participationType",
-          label: "参加項目",
-          type: "select",
-          required: true,
-          options: [
-            { value: "golf_only", label: "ゴルフコンペのみ参加" },
-            { value: "party_only", label: "表彰式のみ参加" },
-            { value: "both", label: "どちらも両方参加" }
-          ]
-        },
-        {
           name: "remarks",
           label: "備考欄",
           type: "textarea",
@@ -148,7 +134,6 @@ export default function GolfApplicationForm({ onSubmit, onBack, initialData = {}
     const updatedParticipants = [...participants]
     updatedParticipants[index][field] = value
     
-    // 一時的に新しい値で合計人数を計算
     const tempParticipants = [...updatedParticipants]
     let tempTotal = 1 // 代表者
     tempParticipants.forEach(participant => {
@@ -157,7 +142,6 @@ export default function GolfApplicationForm({ onSubmit, onBack, initialData = {}
       }
     })
     
-    // 残り定員を超える場合は入力を拒否
     if (tempTotal > capacityInfo.remainingSlots) {
       alert(`申し込み可能人数は残り${capacityInfo.remainingSlots}名です。`)
       return
@@ -184,7 +168,6 @@ export default function GolfApplicationForm({ onSubmit, onBack, initialData = {}
       })
     })
     
-    // 参加人数チェック
     const totalParticipants = calculateTotalParticipants()
     if (totalParticipants > capacityInfo.remainingSlots) {
       newErrors.participants = `申し込み可能人数は残り${capacityInfo.remainingSlots}名です`
@@ -207,15 +190,19 @@ export default function GolfApplicationForm({ onSubmit, onBack, initialData = {}
   const handleSubmit = async (e) => {
     e.preventDefault()
     
-    // 提出前に最新の定員状況を確認
     setLoading(true)
     await fetchCapacity()
     
-    // 少し待ってから再度チェック
     await new Promise(resolve => setTimeout(resolve, 1000))
     
-    // 最新の定員状況で再度チェック
     const totalParticipants = calculateTotalParticipants()
+    
+    // 定員に達している場合の処理
+    if (capacityInfo.remainingSlots === 0) {
+      alert('定員に達しました。現在申し込みを受け付けておりません。')
+      setLoading(false)
+      return
+    }
     
     if (totalParticipants > capacityInfo.remainingSlots) {
       alert(`申し込み可能人数は残り${capacityInfo.remainingSlots}名です。現在の申し込み人数: ${totalParticipants}名`)
@@ -224,14 +211,14 @@ export default function GolfApplicationForm({ onSubmit, onBack, initialData = {}
     }
     
     if (validateForm()) {
-      // 有効な参加者のみを抽出
       const validParticipants = participants.filter(p => p.name.trim())
       
       const submissionData = {
         ...formData,
         participants: validParticipants,
         totalParticipants: totalParticipants,
-        // 下位互換のために既存フィールドも設定
+        // 参加項目を削除し、デフォルト値を設定
+        participationType: 'both', // 両方参加をデフォルトに
         lastName: formData.representativeName?.split('　')[0] || formData.representativeName?.split(' ')[0] || formData.representativeName,
         firstName: formData.representativeName?.split('　')[1] || formData.representativeName?.split(' ')[1] || '',
         lastNameKana: formData.representativeKana?.split('　')[0] || formData.representativeKana?.split(' ')[0] || formData.representativeKana,
@@ -264,21 +251,6 @@ export default function GolfApplicationForm({ onSubmit, onBack, initialData = {}
             className={errors[field.name] ? styles.inputError : styles.textarea}
           />
         )
-      case 'select':
-        return (
-          <select
-            {...commonProps}
-            onChange={(e) => handleInputChange(field.name, e.target.value)}
-            className={errors[field.name] ? styles.inputError : styles.select}
-          >
-            <option value="">選択してください</option>
-            {field.options.map(option => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
-        )
       default:
         return (
           <input
@@ -306,7 +278,7 @@ export default function GolfApplicationForm({ onSubmit, onBack, initialData = {}
             type="text"
             value={participant.name}
             onChange={(e) => handleParticipantChange(index, 'name', e.target.value)}
-            placeholder={canAddParticipant ? "山田　花子" : `残り${capacityInfo.remainingSlots - currentTotal+1}名`}
+            placeholder={canAddParticipant ? "山田　花子" : `残り${Math.max(0, capacityInfo.remainingSlots - currentTotal + 1)}名`}
             className={styles.input}
             disabled={!canAddParticipant && !participant.name.trim()}
           />
@@ -319,7 +291,7 @@ export default function GolfApplicationForm({ onSubmit, onBack, initialData = {}
             type="text"
             value={participant.kana}
             onChange={(e) => handleParticipantChange(index, 'kana', e.target.value)}
-            placeholder={canAddParticipant ? "やまだ　はなこ" : `残り${capacityInfo.remainingSlots - currentTotal+1}名`}
+            placeholder={canAddParticipant ? "やまだ　はなこ" : `残り${Math.max(0, capacityInfo.remainingSlots - currentTotal + 1)}名`}
             className={styles.input}
             disabled={!canAddParticipant && !participant.name.trim()}
           />
@@ -327,17 +299,6 @@ export default function GolfApplicationForm({ onSubmit, onBack, initialData = {}
       </div>
     )
   }
-
-  const getCapacityStatus = () => {
-    if (capacityInfo.remainingSlots === 0) {
-      return { text: '🚫 定員に達しました。現在申し込みを受け付けておりません。', className: styles.full }
-    } else if (capacityInfo.remainingSlots <= 4) {
-      return { text: '⚠️ 残りわずかです', className: styles.warning }
-    }
-    return null
-  }
-
-  const capacityStatus = getCapacityStatus()
 
   return (
     <div className={styles.container}>
@@ -372,12 +333,9 @@ export default function GolfApplicationForm({ onSubmit, onBack, initialData = {}
               </p>
             )}
             
-            {capacityStatus && capacityInfo.remainingSlots !== 0 && (
-              <p className={capacityStatus.className}>{capacityStatus.text}</p>
+            {capacityInfo.remainingSlots <= 4 && capacityInfo.remainingSlots > 0 && (
+              <p className={styles.warning}>⚠️ 残りわずかです</p>
             )}
-            
-            <div className={styles.debugControls}>
-            </div>
           </div>
 
           {/* 代表者情報 */}

@@ -78,9 +78,6 @@ export default function CompletionPage({ uniqueId, data, onHome, eventType }) {
                 <p><strong>代表者:</strong> {eventType === 'golf' ? data.representativeName : `${data.lastName} ${data.firstName}`}</p>
                 <p><strong>開催日時:</strong> {getEventDate()}</p>
                 <p><strong>所属機関:</strong> {data.organization || data.companyName}</p>
-                {data.participationType && (
-                  <p><strong>参加形態:</strong> {data.participationType}</p>
-                )}
                 {eventType === 'golf' && (
                   <p><strong>参加人数:</strong> {data.totalParticipants}名</p>
                 )}

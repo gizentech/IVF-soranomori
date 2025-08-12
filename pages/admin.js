@@ -9,6 +9,7 @@ export default function AdminPage() {
   const [stats, setStats] = useState(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [debugInfo, setDebugInfo] = useState({})
   const router = useRouter()
 
   // ページ読み込み時に自動でデータを取得
@@ -30,31 +31,149 @@ export default function AdminPage() {
     }
   }
 
+  const testFirestoreConnection = async () => {
+    try {
+      console.log('Testing Firestore connection...')
+      
+      const response = await fetch('/api/test-firestore', {
+        method: 'GET',
+        headers: {
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache',
+          'Accept': 'application/json'
+        }
+      })
+      
+      console.log('Test response status:', response.status)
+      console.log('Test response headers:', Object.fromEntries(response.headers.entries()))
+      
+      if (!response.ok) {
+        const errorText = await response.text()
+        console.error('Test API error response:', errorText)
+        throw new Error(`HTTP ${response.status}: ${errorText}`)
+      }
+      
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const responseText = await response.text()
+        console.error('Non-JSON response:', responseText)
+        throw new Error('APIが正しいJSONを返していません')
+      }
+      
+      const result = await response.json()
+      console.log('Firestore test result:', result)
+      
+      setDebugInfo(prev => ({
+        ...prev,
+        firestoreTest: result,
+        lastTestedAt: new Date().toLocaleString('ja-JP')
+      }))
+      
+      if (!result.success) {
+        setError(`Firestore接続エラー: ${result.error} - ${result.message}`)
+        return false
+      }
+      
+      return true
+    } catch (error) {
+      console.error('Firestore test failed:', error)
+      setError('Firestore接続テストに失敗しました: ' + error.message)
+      setDebugInfo(prev => ({
+        ...prev,
+        firestoreTest: {
+          success: false,
+          error: error.message,
+          timestamp: new Date().toISOString()
+        },
+        lastTestedAt: new Date().toLocaleString('ja-JP')
+      }))
+      return false
+    }
+  }
+
   const fetchStats = async () => {
     setLoading(true)
     setError('')
+    
     try {
-      console.log('Fetching stats...')
+      console.log('=== Starting admin stats fetch ===')
+      
+      // まずFirestore接続テストを実行
+      console.log('Testing Firestore connection first...')
+      const connectionOk = await testFirestoreConnection()
+      
+      if (!connectionOk) {
+        console.log('Connection test failed, but trying stats API anyway...')
+      }
+      
+      console.log('Fetching stats from API...')
       const response = await fetch('/api/admin/stats', {
         method: 'GET',
         headers: {
           'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache'
+          'Pragma': 'no-cache',
+          'Accept': 'application/json'
         }
       })
       
       console.log('Stats response status:', response.status)
+      console.log('Stats response headers:', Object.fromEntries(response.headers.entries()))
       
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
+        const errorText = await response.text()
+        console.error('Stats API error response:', errorText)
+        throw new Error(`Stats API Error - HTTP ${response.status}: ${errorText.substring(0, 200)}`)
+      }
+      
+      const contentType = response.headers.get('content-type')
+      if (!contentType || !contentType.includes('application/json')) {
+        const responseText = await response.text()
+        console.error('Stats API non-JSON response:', responseText.substring(0, 200))
+        throw new Error('Stats APIが正しいJSONを返していません')
       }
       
       const data = await response.json()
-      console.log('Stats data received:', data)
-      setStats(data)
+      console.log('=== Stats data received ===')
+      console.log('Full response:', JSON.stringify(data, null, 2))
+      
+      if (data.success === false) {
+        throw new Error(data.message || data.error || 'Stats API returned error')
+      }
+      
+      // データの検証
+      console.log('Validating stats data...')
+      const validatedStats = {
+        nursing: data.nursing || { active: 0, cancelled: 0, overCapacity: 0, capacity: 30, total: 0 },
+        ivf: data.ivf || { active: 0, cancelled: 0, overCapacity: 0, capacity: 100, total: 0 },
+        golf: data.golf || { active: 0, cancelled: 0, overCapacity: 0, capacity: 16, total: 0 },
+        timestamp: data.timestamp,
+        success: data.success
+      }
+      
+      console.log('Validated stats:', validatedStats)
+      setStats(validatedStats)
+      
+      setDebugInfo(prev => ({
+        ...prev,
+        lastFetchAt: new Date().toLocaleString('ja-JP'),
+        statsResponse: data,
+        validatedStats: validatedStats
+      }))
+      
     } catch (error) {
-      console.error('Stats fetch error:', error)
+      console.error('=== Stats fetch error ===')
+      console.error('Error message:', error.message)
+      console.error('Error stack:', error.stack)
+      
       setError('データの取得に失敗しました: ' + error.message)
+      setDebugInfo(prev => ({
+        ...prev,
+        lastError: {
+          message: error.message,
+          stack: error.stack,
+          timestamp: new Date().toLocaleString('ja-JP')
+        }
+      }))
     } finally {
       setLoading(false)
     }
@@ -131,6 +250,13 @@ export default function AdminPage() {
     return '#28a745' // 余裕あり - 緑
   }
 
+  const toggleDebugInfo = () => {
+    setDebugInfo(prev => ({
+      ...prev,
+      showDebug: !prev.showDebug
+    }))
+  }
+
   if (!isAuthenticated) {
     return (
       <div className={styles.loginContainer}>
@@ -165,6 +291,13 @@ export default function AdminPage() {
         <h1>申し込み状況管理</h1>
         <div className={styles.headerButtons}>
           <button 
+            onClick={testFirestoreConnection} 
+            className={styles.testButton}
+            disabled={loading}
+          >
+            {loading ? 'テスト中...' : '🔗 接続テスト'}
+          </button>
+          <button 
             onClick={fetchStats} 
             className={styles.refreshButton}
             disabled={loading}
@@ -172,11 +305,18 @@ export default function AdminPage() {
             {loading ? '更新中...' : '🔄 データ更新'}
           </button>
           <button 
+            onClick={toggleDebugInfo} 
+            className={styles.debugButton}
+          >
+            🐛 デバッグ情報
+          </button>
+          <button 
             onClick={() => {
               setIsAuthenticated(false)
               setStats(null)
               setPassword('')
               setError('')
+              setDebugInfo({})
             }} 
             className={styles.logoutButton}
           >
@@ -188,6 +328,47 @@ export default function AdminPage() {
       {error && (
         <div className={styles.errorMessage}>
           ❌ {error}
+        </div>
+      )}
+
+      {/* デバッグ情報表示 */}
+      {debugInfo.showDebug && (
+        <div className={styles.debugInfo}>
+          <h3>🐛 デバッグ情報</h3>
+          <div className={styles.debugContent}>
+            <div className={styles.debugSection}>
+              <h4>Firestore接続テスト</h4>
+              <pre>{JSON.stringify(debugInfo.firestoreTest, null, 2)}</pre>
+              <p>最終テスト時刻: {debugInfo.lastTestedAt || 'なし'}</p>
+            </div>
+            
+            <div className={styles.debugSection}>
+              <h4>Stats API レスポンス</h4>
+              <pre>{JSON.stringify(debugInfo.statsResponse, null, 2)}</pre>
+              <p>最終取得時刻: {debugInfo.lastFetchAt || 'なし'}</p>
+            </div>
+            
+            <div className={styles.debugSection}>
+              <h4>検証済みStats</h4>
+              <pre>{JSON.stringify(debugInfo.validatedStats, null, 2)}</pre>
+            </div>
+            
+            {debugInfo.lastError && (
+              <div className={styles.debugSection}>
+                <h4>最新エラー</h4>
+                <div className={styles.errorDetails}>
+                  <p><strong>メッセージ:</strong> {debugInfo.lastError.message}</p>
+                  <p><strong>時刻:</strong> {debugInfo.lastError.timestamp}</p>
+                  {debugInfo.lastError.stack && (
+                    <details>
+                      <summary>スタックトレース</summary>
+                      <pre>{debugInfo.lastError.stack}</pre>
+                    </details>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
