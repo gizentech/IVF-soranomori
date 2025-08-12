@@ -3,14 +3,20 @@
     "pages/api/submit.js": {
       "maxDuration": 60
     },
-    "pages/api/send-ticket.js": {
-      "maxDuration": 60
+    "pages/api/send-email.js": {
+      "maxDuration": 30
     },
-    "pages/api/generate-pdf.js": {
-      "maxDuration": 60
+    "pages/api/test-simple-email.js": {
+      "maxDuration": 30
     },
     "pages/api/cancel.js": {
       "maxDuration": 30
+    },
+    "pages/api/admin/stats.js": {
+      "maxDuration": 30
     }
+  },
+  "env": {
+    "EMAIL_HOST": "smtp.gmail.com"
   }
 }

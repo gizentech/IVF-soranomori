@@ -1,51 +1,50 @@
 // pages/api/test-email.js
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ error: 'Method not allowed' })
+export default function handler(req, res) {
+  console.log('=== Test Email API Called ===')
+  console.log('Method:', req.method)
+  console.log('Query:', req.query)
+  console.log('Body:', req.body)
+
+  // すべてのHTTPメソッドを許可
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end()
   }
 
   try {
-    const { generateConfirmationEmailContent } = await import('../../lib/email')
-    
-    const testData = {
-      uniqueId: 'TEST-' + Date.now(),
-      eventType: 'golf',
-      representativeName: 'テスト 太郎',
-      email: req.body.email || 'shiraishi.healthcare@gmail.com',
-      organization: 'テスト組織',
-      companyName: 'テスト会社',
-      totalParticipants: 2
+    // 環境変数チェック
+    const envStatus = {
+      EMAIL_HOST_EXISTS: !!process.env.EMAIL_HOST,
+      EMAIL_USER_EXISTS: !!process.env.EMAIL_USER,
+      EMAIL_PASSWORD_EXISTS: !!process.env.EMAIL_PASSWORD,
+      EMAIL_HOST_VALUE: process.env.EMAIL_HOST,
+      EMAIL_USER_VALUE: process.env.EMAIL_USER,
+      PASSWORD_LENGTH: process.env.EMAIL_PASSWORD?.length || 0
     }
-
-    const emailContent = generateConfirmationEmailContent(testData)
-
-    const emailResponse = await fetch(`${req.headers.origin || 'http://localhost:3000'}/api/send-email`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        to: testData.email,
-        subject: emailContent.subject,
-        text: emailContent.text,
-        html: emailContent.html
-      })
-    })
-
-    const emailResult = await emailResponse.json()
+    
+    console.log('Environment status:', envStatus)
+    
+    const testEmail = req.query?.email || req.body?.email || 'default@example.com'
+    const timestamp = new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })
 
     return res.status(200).json({
-      success: emailResult.success,
-      message: emailResult.success ? 'テストメール送信成功' : 'テストメール送信失敗',
-      testData,
-      emailResult
+      success: true,
+      message: 'テストAPI動作確認',
+      method: req.method,
+      testEmail: testEmail,
+      timestamp: timestamp,
+      env: envStatus
     })
 
   } catch (error) {
-    console.error('Test email error:', error)
+    console.error('Test API error:', error)
     return res.status(500).json({
       success: false,
-      error: error.message
+      error: error.message,
+      timestamp: new Date().toISOString()
     })
   }
 }

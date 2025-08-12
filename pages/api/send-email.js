@@ -1,42 +1,52 @@
 // pages/api/send-email.js
 export default async function handler(req, res) {
+  // CORS設定
+  res.setHeader('Access-Control-Allow-Origin', '*')
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
+
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end()
+  }
+
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' })
   }
 
   try {
     console.log('=== Send Email API Called ===')
-    console.log('Request body:', req.body)
 
-    const { to, subject, html, text, data } = req.body
+    const { to, subject, html, text } = req.body
 
     if (!to || !subject) {
       return res.status(400).json({ error: 'Missing required fields: to, subject' })
     }
 
     // 環境変数チェック
-    const requiredEnvVars = ['EMAIL_HOST', 'EMAIL_USER', 'EMAIL_PASSWORD']
-    const missingVars = requiredEnvVars.filter(varName => !process.env[varName])
-    
-    if (missingVars.length > 0) {
-      console.error('Missing environment variables:', missingVars)
+    console.log('Environment check:')
+    console.log('EMAIL_HOST exists:', !!process.env.EMAIL_HOST)
+    console.log('EMAIL_USER exists:', !!process.env.EMAIL_USER)
+    console.log('EMAIL_PASSWORD exists:', !!process.env.EMAIL_PASSWORD)
+
+    if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
       return res.status(500).json({ 
         error: 'メール設定が不完全です',
-        missingVars 
+        missing: {
+          host: !process.env.EMAIL_HOST,
+          user: !process.env.EMAIL_USER,
+          password: !process.env.EMAIL_PASSWORD
+        }
       })
     }
 
-    console.log('Environment variables OK')
-    console.log('EMAIL_HOST:', process.env.EMAIL_HOST)
-    console.log('EMAIL_USER:', process.env.EMAIL_USER)
+    // 動的インポートでnodemailerを読み込み
+    console.log('Importing nodemailer...')
+    const nodemailer = await import('nodemailer')
+    console.log('nodemailer imported:', typeof nodemailer)
+    console.log('createTransporter:', typeof nodemailer.default?.createTransporter)
 
-    // nodemailerをrequireで読み込み（Vercel対応）
-    const nodemailer = require('nodemailer')
-    console.log('nodemailer loaded:', typeof nodemailer)
-    console.log('createTransporter:', typeof nodemailer.createTransporter)
-
-    const transporterConfig = {
-      service: 'gmail',
+    // デフォルトエクスポートを使用
+    const transporter = nodemailer.default.createTransporter({
       host: 'smtp.gmail.com',
       port: 587,
       secure: false,
@@ -44,16 +54,26 @@ export default async function handler(req, res) {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASSWORD,
       },
-      debug: true,
-      logger: false // ログを簡潔にする
+      tls: {
+        rejectUnauthorized: false
+      }
+    })
+
+    console.log('Transporter created successfully')
+
+    // SMTP接続テスト
+    try {
+      await transporter.verify()
+      console.log('✅ SMTP connection verified')
+    } catch (verifyError) {
+      console.error('❌ SMTP verification failed:', verifyError.message)
+      
+      return res.status(500).json({
+        success: false,
+        error: 'SMTP接続に失敗しました',
+        details: verifyError.message
+      })
     }
-
-    console.log('Creating transporter...')
-    const transporter = nodemailer.createTransporter(transporterConfig)
-
-    console.log('Verifying SMTP connection...')
-    await transporter.verify()
-    console.log('✅ SMTP connection verified')
 
     const mailOptions = {
       from: {
@@ -62,19 +82,15 @@ export default async function handler(req, res) {
       },
       to: to,
       subject: subject,
-      text: text,
-      html: html
+      text: text || 'メール本文がありません',
+      html: html || '<p>メール本文がありません</p>'
     }
 
-    console.log('Sending email...')
-    console.log('To:', to)
-    console.log('Subject:', subject)
-
+    console.log('Sending email to:', to)
     const info = await transporter.sendMail(mailOptions)
     
     console.log('✅ Email sent successfully')
     console.log('Message ID:', info.messageId)
-    console.log('Response:', info.response)
 
     return res.status(200).json({
       success: true,
@@ -84,16 +100,12 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('❌ Email sending failed:', error)
-    console.error('Error details:', {
-      message: error.message,
-      code: error.code,
-      command: error.command
-    })
 
     return res.status(500).json({
       success: false,
       error: error.message,
-      code: error.code
+      code: error.code,
+      timestamp: new Date().toISOString()
     })
   }
 }

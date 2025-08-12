@@ -15,27 +15,21 @@ function generateGroupId(eventType) {
   return `${prefix}${randomString}`
 }
 
-// Firestoreに安全なデータを準備する関数
 function sanitizeDataForFirestore(data) {
   const sanitized = {}
   
   for (const [key, value] of Object.entries(data)) {
     if (value === undefined || value === null) {
-      // undefinedまたはnullの場合は空文字に変換
       sanitized[key] = ''
     } else if (typeof value === 'string') {
-      // 文字列の場合はトリム
       sanitized[key] = value.trim()
     } else if (Array.isArray(value)) {
-      // 配列の場合は各要素をサニタイズ
       sanitized[key] = value.map(item => 
         typeof item === 'object' ? sanitizeDataForFirestore(item) : item
       )
     } else if (typeof value === 'object' && value.constructor === Object) {
-      // オブジェクトの場合は再帰的にサニタイズ
       sanitized[key] = sanitizeDataForFirestore(value)
     } else {
-      // その他の値はそのまま
       sanitized[key] = value
     }
   }
@@ -73,11 +67,7 @@ async function sendEmail(emailData) {
     console.log('件名:', emailContent.subject)
     console.log('送信先:', emailData.email)
 
-    const baseUrl = process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
-      : process.env.NODE_ENV === 'development' 
-        ? 'http://localhost:3000'
-        : 'https://soranomori-event-owfxur5tk-fl-plant.vercel.app'
+    const baseUrl = 'https://soranomori-event-mu.vercel.app'
 
     console.log('API呼び出しURL:', `${baseUrl}/api/send-email`)
 
@@ -142,7 +132,6 @@ export default async function handler(req, res) {
     const rawData = req.body
     console.log('Raw data received:', rawData)
 
-    // データをサニタイズ
     const data = sanitizeDataForFirestore(rawData)
     console.log('Sanitized data:', data)
 
@@ -189,13 +178,11 @@ export default async function handler(req, res) {
     let uniqueId
 
     if (eventType === 'golf') {
-      // ゴルフコンペの場合
       const groupId = generateGroupId('golf')
       const totalParticipants = data.totalParticipants || (data.participants ? data.participants.length + 1 : 1)
 
       console.log(`Processing golf registration for ${totalParticipants} participants`)
 
-      // 代表者のデータ
       const representativeData = sanitizeDataForFirestore({
         eventType: 'golf',
         groupId,
@@ -214,6 +201,7 @@ export default async function handler(req, res) {
         email: data.email || '',
         phone: data.phone || '',
         organization: data.organization || '',
+        companyName: data.companyName || '',
         participationType: data.participationType || '',
         remarks: data.remarks || '',
         specialRequests: data.specialRequests || '',
@@ -227,7 +215,6 @@ export default async function handler(req, res) {
       savedDocuments++
       uniqueId = groupId
 
-      // 同行者のデータ
       if (data.participants && Array.isArray(data.participants) && data.participants.length > 0) {
         console.log(`Processing ${data.participants.length} participants`)
         
@@ -253,6 +240,7 @@ export default async function handler(req, res) {
             email: participant.email || '',
             phone: participant.phone || '',
             organization: participant.organization || '',
+            companyName: data.companyName || '',
             participationType: data.participationType || '',
             remarks: data.remarks || '',
             specialRequests: data.specialRequests || '',
@@ -268,7 +256,6 @@ export default async function handler(req, res) {
       }
 
     } else {
-      // 看護学会・IVF学会の場合
       uniqueId = generateUniqueId(eventType)
 
       const registrationData = sanitizeDataForFirestore({
@@ -308,22 +295,22 @@ export default async function handler(req, res) {
       status: 'confirmed',
       message: 'お申し込みが完了しました',
       remainingSlots: finalRemainingSlots,
-      emailSent,
-      emailError,
-      savedDocuments,
-      timestamp: new Date().toISOString()
-    }
+     emailSent,
+     emailError,
+     savedDocuments,
+     timestamp: new Date().toISOString()
+   }
 
-    console.log('Final response:', response)
-    return res.status(200).json(response)
+   console.log('Final response:', response)
+   return res.status(200).json(response)
 
-  } catch (error) {
-    console.error('Submit API error:', error)
-    console.error('Error stack:', error.stack)
-    return res.status(500).json({
-      error: 'Internal server error',
-      message: error.message,
-      timestamp: new Date().toISOString()
-    })
-  }
+ } catch (error) {
+   console.error('Submit API error:', error)
+   console.error('Error stack:', error.stack)
+   return res.status(500).json({
+     error: 'Internal server error',
+     message: error.message,
+     timestamp: new Date().toISOString()
+   })
+ }
 }

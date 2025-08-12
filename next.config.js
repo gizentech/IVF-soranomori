@@ -4,14 +4,13 @@ const nextConfig = {
   swcMinify: true,
   
   experimental: {
-    serverComponentsExternalPackages: ['pdfkit', 'qrcode']
+    serverComponentsExternalPackages: ['pdfkit', 'qrcode', 'nodemailer']
   },
   
   webpack: (config, { dev, isServer }) => {
     config.resolve.alias.canvas = false
     config.resolve.alias.encoding = false
     
-    // 開発環境でのFirebase環境変数確認
     if (dev && isServer) {
       console.log('=== Environment Variables Check ===')
       
@@ -31,17 +30,16 @@ const nextConfig = {
         missingVars.forEach(varName => {
           console.error(`   - ${varName}`)
         })
-        console.error('\nPlease check your .env.local file')
       } else {
         console.log('✅ All Firebase environment variables are set')
       }
 
-      // Basic Auth 設定確認
-      const hasBasicAuth = process.env.BASIC_AUTH_USER && process.env.BASIC_AUTH_PASSWORD
-      console.log(`Basic Auth: ${hasBasicAuth ? '✅ Configured' : '❌ Not configured'}`)
+      // Email設定確認
+      const hasEmailConfig = process.env.EMAIL_USER && process.env.EMAIL_PASSWORD
+      console.log(`Email Config: ${hasEmailConfig ? '✅ Configured' : '❌ Not configured'}`)
       
-      if (hasBasicAuth) {
-        console.log(`   - User: ${process.env.BASIC_AUTH_USER}`)
+      if (hasEmailConfig) {
+        console.log(`   - User: ${process.env.EMAIL_USER}`)
         console.log(`   - Password: [REDACTED]`)
       }
     }
@@ -49,25 +47,30 @@ const nextConfig = {
     return config
   },
 
-  // 検索エンジン対策
   async headers() {
     return [
       {
-        source: '/robots.txt',
+        source: '/api/:path*',
         headers: [
           {
-            key: 'Content-Type',
-            value: 'text/plain',
+            key: 'Access-Control-Allow-Origin',
+            value: '*',
+          },
+          {
+            key: 'Access-Control-Allow-Methods',
+            value: 'GET, POST, PUT, DELETE, OPTIONS',
+          },
+          {
+            key: 'Access-Control-Allow-Headers',
+            value: 'Content-Type',
           },
         ],
       },
     ]
   },
 
-  // 静的エクスポート設定
   trailingSlash: true,
   
-  // 画像最適化設定
   images: {
     unoptimized: true
   }
