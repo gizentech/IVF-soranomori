@@ -14,12 +14,12 @@ export default function NursingTour() {
   const eventConfig = {
     type: 'nursing',
     title: '第23回日本生殖看護学会学術集会',
-    subtitle: '空の森クリニック見学ツアー',
+    subtitle: '空の森クリニック施設見学',
     date: '2025年10月13日（月）',
-    time: '14:00～（所要時間：60分）',
+    time: '14:00〜（所要時間：約60分）',
     capacity: 30,
     location: '空の森クリニック',
-    organizer: '徳永 季子'
+    organizer: '空の森クリニック 経営管理部 前泊・小禄'
   }
 
   useEffect(() => {

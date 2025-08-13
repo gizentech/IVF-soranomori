@@ -1,23 +1,17 @@
-// pages/api/env-check.js
-export default function handler(req, res) {
-  console.log('Environment check API called')
+// pages/api/check-env.js
+export default async function handler(req, res) {
+  console.log('=== Environment Check ===')
   
-  const envInfo = {
+  const result = {
+    nodeEnv: process.env.NODE_ENV,
+    hasSlackUrl: !!process.env.SLACK_WEBHOOK_URL,
+    slackUrlLength: process.env.SLACK_WEBHOOK_URL?.length || 0,
+    slackUrlStart: process.env.SLACK_WEBHOOK_URL?.substring(0, 30) || 'not found',
     timestamp: new Date().toISOString(),
-    method: req.method,
-    vercel: {
-      NODE_ENV: process.env.NODE_ENV,
-      VERCEL: process.env.VERCEL,
-      VERCEL_URL: process.env.VERCEL_URL
-    },
-    email: {
-      EMAIL_HOST: process.env.EMAIL_HOST || 'NOT_SET',
-      EMAIL_USER: process.env.EMAIL_USER || 'NOT_SET',
-      EMAIL_PASSWORD_SET: !!process.env.EMAIL_PASSWORD,
-      EMAIL_PASSWORD_LENGTH: process.env.EMAIL_PASSWORD?.length || 0
-    }
+    allEnvKeys: Object.keys(process.env).filter(key => key.includes('SLACK'))
   }
-
-  console.log('Environment info:', envInfo)
-  return res.status(200).json(envInfo)
+  
+  console.log('Environment check result:', result)
+  
+  return res.status(200).json(result)
 }

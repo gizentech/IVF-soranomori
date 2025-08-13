@@ -7,7 +7,7 @@ export default function IVFApplicationForm({ onSubmit, onBack, initialData = {} 
   const [errors, setErrors] = useState({})
 
   const timeSlots = [
-    { id: 'slot1', label: '2025年10月10日（金）13:00' },
+    { id: 'slot1', label: '2025年10月10日（金）14:00' },
     { id: 'slot2', label: '2025年10月11日（土）09:00' },
     { id: 'slot3', label: '2025年10月12日（日）09:00' },
     { id: 'slot4', label: '2025年10月12日（日）13:00' },
