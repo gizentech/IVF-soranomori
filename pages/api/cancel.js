@@ -34,26 +34,25 @@ export default async function handler(req, res) {
       throw new Error('Firebase database not initialized')
     }
 
-    // registrationsコレクションから該当データを検索
+    let foundDocs = []
+
+    // 1. uniqueIdで直接検索（代表者など）
     console.log('Searching for registration with uniqueId:', uniqueId)
-    
-    const registrationsQuery = query(
+    const uniqueIdQuery = query(
       collection(db, 'registrations'),
       where('uniqueId', '==', uniqueId)
     )
+    const uniqueIdSnapshot = await getDocs(uniqueIdQuery)
+    console.log('Found documents by uniqueId:', uniqueIdSnapshot.size)
     
-    const registrationsSnapshot = await getDocs(registrationsQuery)
-    console.log('Found documents in registrations:', registrationsSnapshot.size)
-    
-    let foundDocs = []
-    
-    registrationsSnapshot.docs.forEach(doc => {
+    uniqueIdSnapshot.docs.forEach(doc => {
       const data = doc.data()
-      console.log('Found document:', {
+      console.log('Found document by uniqueId:', {
         id: doc.id,
         uniqueId: data.uniqueId,
         groupId: data.groupId,
-        eventType: data.eventType
+        eventType: data.eventType,
+        isRepresentative: data.isRepresentative
       })
       foundDocs.push({
         docRef: doc.ref,
@@ -61,29 +60,61 @@ export default async function handler(req, res) {
       })
     })
 
-    // groupIdでも検索（ゴルフの場合）
-    if (foundDocs.length === 0) {
-      console.log('No documents found by uniqueId, trying groupId...')
-      const groupQuery = query(
-        collection(db, 'registrations'),
-        where('groupId', '==', uniqueId)
-      )
-      
-      const groupSnapshot = await getDocs(groupQuery)
-      console.log('Found documents by groupId:', groupSnapshot.size)
-      
-      groupSnapshot.docs.forEach(doc => {
-        const data = doc.data()
-        console.log('Found document by groupId:', {
+    // 2. groupIdで検索（ゴルフの場合、同じグループの全参加者）
+    console.log('Searching for registration with groupId:', uniqueId)
+    const groupIdQuery = query(
+      collection(db, 'registrations'),
+      where('groupId', '==', uniqueId)
+    )
+    const groupIdSnapshot = await getDocs(groupIdQuery)
+    console.log('Found documents by groupId:', groupIdSnapshot.size)
+    
+    groupIdSnapshot.docs.forEach(doc => {
+      const data = doc.data()
+      // 重複チェック：既に追加されていないかチェック
+      const alreadyExists = foundDocs.some(existing => existing.docRef.id === doc.id)
+      if (!alreadyExists) {
+        console.log('Found additional document by groupId:', {
           id: doc.id,
           uniqueId: data.uniqueId,
           groupId: data.groupId,
-          eventType: data.eventType
+          eventType: data.eventType,
+          isRepresentative: data.isRepresentative,
+          participantNumber: data.participantNumber
         })
         foundDocs.push({
           docRef: doc.ref,
           data: data
         })
+      }
+    })
+
+    // 3. 部分的なuniqueIdで検索（例：IVF-GOLF123456-P2 など）
+    const baseId = uniqueId.replace(/-P\d+$/, '') // -P2, -P3などを除去
+    if (baseId !== uniqueId) {
+      console.log('Searching for related documents with baseId:', baseId)
+      const baseIdQuery = query(
+        collection(db, 'registrations'),
+        where('groupId', '==', baseId)
+      )
+      const baseIdSnapshot = await getDocs(baseIdQuery)
+      console.log('Found documents by baseId:', baseIdSnapshot.size)
+      
+      baseIdSnapshot.docs.forEach(doc => {
+        const data = doc.data()
+        const alreadyExists = foundDocs.some(existing => existing.docRef.id === doc.id)
+        if (!alreadyExists) {
+          console.log('Found additional document by baseId:', {
+            id: doc.id,
+            uniqueId: data.uniqueId,
+            groupId: data.groupId,
+            participantNumber: data.participantNumber
+          })
+          foundDocs.push({
+            docRef: doc.ref,
+            data: data
+          })
+        }
       })
     }
 
@@ -108,7 +139,10 @@ export default async function handler(req, res) {
 
       console.log('Moving document to cancelled collection:', {
         originalId: docRef.id,
-        uniqueId: data.uniqueId
+        uniqueId: data.uniqueId,
+        groupId: data.groupId,
+        participantNumber: data.participantNumber,
+        isRepresentative: data.isRepresentative
       })
 
       await addDoc(collection(db, 'cancelled'), cancelData)
@@ -118,12 +152,19 @@ export default async function handler(req, res) {
     await Promise.all(cancelPromises)
 
     console.log('Reservation cancelled successfully:', uniqueId)
+    console.log('Total cancelled documents:', foundDocs.length)
 
     return res.status(200).json({
       success: true,
       message: 'キャンセルが完了しました',
       uniqueId,
-      cancelledCount: foundDocs.length
+      cancelledCount: foundDocs.length,
+      details: foundDocs.map(doc => ({
+        uniqueId: doc.data.uniqueId,
+        groupId: doc.data.groupId,
+        participantNumber: doc.data.participantNumber,
+        isRepresentative: doc.data.isRepresentative
+      }))
     })
 
   } catch (error) {

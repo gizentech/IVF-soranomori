@@ -1,8 +1,7 @@
 // pages/api/send-email.js
-import * as nodemailer from 'nodemailer'
+import nodemailer from 'nodemailer'
 
 export default async function handler(req, res) {
-  // CORS設定
   res.setHeader('Access-Control-Allow-Origin', '*')
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS')
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
@@ -24,25 +23,20 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Missing required fields: to, subject' })
     }
 
-    // 環境変数チェック
-    console.log('Environment check:')
-    console.log('EMAIL_HOST exists:', !!process.env.EMAIL_HOST)
     console.log('EMAIL_USER exists:', !!process.env.EMAIL_USER)
     console.log('EMAIL_PASSWORD exists:', !!process.env.EMAIL_PASSWORD)
-    console.log('EMAIL_USER value:', process.env.EMAIL_USER)
 
-    if (!process.env.EMAIL_HOST || !process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
+    if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
       return res.status(500).json({ 
         error: 'メール設定が不完全です',
         missing: {
-          host: !process.env.EMAIL_HOST,
           user: !process.env.EMAIL_USER,
           password: !process.env.EMAIL_PASSWORD
         }
       })
     }
 
-    // Gmail SMTP設定（createTransport に修正）
+    // 正しい関数名を使用
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -54,21 +48,8 @@ export default async function handler(req, res) {
       }
     })
 
-    console.log('Transporter created successfully')
-
-    // SMTP接続テスト
-    try {
-      await transporter.verify()
-      console.log('✅ SMTP connection verified')
-    } catch (verifyError) {
-      console.error('❌ SMTP verification failed:', verifyError.message)
-      
-      return res.status(500).json({
-        success: false,
-        error: 'SMTP接続に失敗しました',
-        details: verifyError.message
-      })
-    }
+    await transporter.verify()
+    console.log('✅ SMTP connection verified')
 
     const mailOptions = {
       from: {
@@ -81,13 +62,8 @@ export default async function handler(req, res) {
       html: html || '<p>メール本文がありません</p>'
     }
 
-    console.log('Sending email to:', to)
-    console.log('Email subject:', subject)
-    
     const info = await transporter.sendMail(mailOptions)
-    
-    console.log('✅ Email sent successfully')
-    console.log('Message ID:', info.messageId)
+    console.log('✅ Email sent successfully:', info.messageId)
 
     return res.status(200).json({
       success: true,
@@ -97,7 +73,6 @@ export default async function handler(req, res) {
 
   } catch (error) {
     console.error('❌ Email sending failed:', error)
-
     return res.status(500).json({
       success: false,
       error: error.message,
