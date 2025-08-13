@@ -1,5 +1,6 @@
 // components/IVFConfirmationForm.js
 import { useState } from 'react'
+import { Analytics } from '@vercel/analytics/next'
 import styles from '../styles/ConfirmationForm.module.css'
 
 export default function IVFConfirmationForm({ data, onConfirm, onBack }) {

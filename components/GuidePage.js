@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import styles from '../styles/GuidePage.module.css'
+import { Analytics } from '@vercel/analytics/next'
 
 export default function GuidePage({ onNext }) {
   useEffect(() => {

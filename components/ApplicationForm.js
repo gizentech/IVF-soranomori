@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import questions from '../data/question.json'
+import { Analytics } from '@vercel/analytics/next'
 import styles from '../styles/ApplicationForm.module.css'
 
 export default function ApplicationForm({ onSubmit, onBack, initialData = {} }) {

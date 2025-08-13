@@ -1,4 +1,5 @@
 // pages/index.js
+import { Analytics } from '@vercel/analytics/next'
 import Link from 'next/link'
 import Head from 'next/head'
 import styles from '../styles/TopPage.module.css'
@@ -64,11 +65,8 @@ export default function TopPage() {
                     <h3>{event.title}</h3>
                     <h4>{event.subtitle}</h4>
                     <div className={styles.eventDetails}>
-                      <p><strong>開催日時:</strong> {event.date}</p>
-                      <p><strong>定員:</strong> {event.capacity}</p>
-                    </div>
-                    <div className={styles.applyButton}>
-                      申し込む
+                      <p><strong>開催日時：</strong> {event.date}</p>
+                      <p><strong>参加定員：</strong> {event.capacity}</p>
                     </div>
                   </div>
                 </div>

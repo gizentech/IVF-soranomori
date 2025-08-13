@@ -5,6 +5,7 @@ import IVFApplicationForm from '../components/IVFApplicationForm'
 import IVFConfirmationForm from '../components/IVFConfirmationForm'
 import CompletionPage from '../components/CompletionPage'
 import CancelForm from '../components/CancelForm'
+import { Analytics } from "@vercel/analytics/next"
 
 export default function IVFTour() {
   const [currentPage, setCurrentPage] = useState('guide')

@@ -1,5 +1,6 @@
 // components/IVFApplicationForm.js
 import { useState } from 'react'
+import { Analytics } from '@vercel/analytics/next'
 import styles from '../styles/ApplicationForm.module.css'
 
 export default function IVFApplicationForm({ onSubmit, onBack, initialData = {} }) {

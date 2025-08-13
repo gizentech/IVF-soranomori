@@ -1,6 +1,7 @@
 // components/GolfConfirmationForm.js
 import { useState } from 'react'
 import styles from '../styles/ConfirmationForm.module.css'
+import { Analytics } from '@vercel/analytics/next'
 
 export default function GolfConfirmationForm({ data, onConfirm, onBack }) {
   const [isSubmitting, setIsSubmitting] = useState(false)

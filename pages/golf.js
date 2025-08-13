@@ -1,5 +1,6 @@
 // pages/golf.js
 import { useState, useEffect } from 'react'
+import { Analytics } from "@vercel/analytics/next"
 import GolfGuidePage from '../components/GolfGuidePage'
 import GolfApplicationForm from '../components/GolfApplicationForm'
 import GolfConfirmationForm from '../components/GolfConfirmationForm'

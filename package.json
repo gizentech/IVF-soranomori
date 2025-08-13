@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.44",
+    "@vercel/analytics": "^1.5.0",
     "firebase": "^12.1.0",
     "googleapis": "^126.0.1",
     "next": "13.5.6",

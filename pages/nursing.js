@@ -5,6 +5,7 @@ import ApplicationForm from '../components/ApplicationForm'
 import ConfirmationForm from '../components/ConfirmationForm'
 import CompletionPage from '../components/CompletionPage'
 import CancelForm from '../components/CancelForm'
+import { Analytics } from '@vercel/analytics/next'
 
 export default function NursingTour() {
   const [currentPage, setCurrentPage] = useState('guide')

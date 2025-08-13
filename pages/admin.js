@@ -2,6 +2,7 @@
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import styles from '../styles/Admin.module.css'
+import { Analytics } from '@vercel/analytics/next'
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false)

@@ -85,6 +85,7 @@
   transform: translateY(-4px);
 }
 
+/* SP向け: 画像と文字を縦に並べる */
 .eventCard {
   background: white;
   border-radius: 16px;
@@ -94,9 +95,8 @@
   border: 2px solid transparent;
   position: relative;
   display: flex;
-  flex-direction: row;
-  align-items: center;
-  min-height: 140px;
+  flex-direction: column;
+  min-height: auto;
   cursor: pointer;
 }
 
@@ -107,16 +107,16 @@
 }
 
 .eventImage {
-  width: 160px;
-  height: 140px;
+  width: 100%;
+  height: 180px;
   overflow: hidden;
   position: relative;
-  background: linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%);
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px;
+  padding: 20px;
+  background-color: #f0f4f8; /* 背景色を追加して画像を際立たせる */
 }
 
 .eventImage img {
@@ -126,7 +126,7 @@
   height: auto;
   object-fit: contain;
   transition: all 0.3s ease;
-  opacity: 0.8;
+  opacity: 0.9;
 }
 
 .eventCard:hover .eventImage img {
@@ -135,11 +135,12 @@
 }
 
 .eventContent {
-  padding: 25px 30px;
+  padding: 25px 20px;
   flex: 1;
   display: flex;
   flex-direction: column;
   justify-content: center;
+  text-align: center; /* SPではテキストを中央寄せ */
 }
 
 .eventContent h3 {
@@ -170,6 +171,10 @@
 
 .eventDetails {
   margin-bottom: 0;
+  text-align: left; /* 詳細部分のみ左寄せに戻す */
+  width: 100%;
+  max-width: 300px;
+  margin: 0 auto;
 }
 
 .eventDetails p {
@@ -254,18 +259,27 @@
     gap: 35px;
   }
   
+  /* タブレット以上: 画像と文字を横並びに戻す */
   .eventCard {
+    flex-direction: row;
     min-height: 160px;
   }
-  
+
   .eventImage {
     width: 180px;
     height: 160px;
     padding: 15px;
+    background-color: transparent;
   }
   
   .eventContent {
     padding: 30px 40px;
+    text-align: left; /* テキストを左寄せに戻す */
+  }
+
+  .eventDetails {
+    max-width: none;
+    margin: 0;
   }
   
   .eventContent h3 {
@@ -437,9 +451,17 @@
   transition: all 0.3s ease;
 }
 
+/* SPでのホバー矢印を非表示に */
 @media (max-width: 767px) {
   .eventCard:hover::after {
-    right: 20px;
-    font-size: 20px;
+    content: none;
+  }
+  .eventContent {
+    text-align: center;
+  }
+  .eventDetails {
+    text-align: left;
+    max-width: 300px;
+    margin: 0 auto;
   }
 }

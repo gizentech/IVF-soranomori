@@ -1,6 +1,7 @@
 // components/GolfApplicationForm.js
 import { useState, useEffect } from 'react'
 import styles from '../styles/ApplicationForm.module.css'
+import { Analytics } from '@vercel/analytics/next'
 
 export default function GolfApplicationForm({ onSubmit, onBack, initialData = {} }) {
   const [formData, setFormData] = useState(initialData)
