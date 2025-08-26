@@ -1,4 +1,4 @@
-// pages/admin.js
+// pages/admin.js（削除機能を除去した版）
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/router'
 import styles from '../styles/Admin.module.css'
@@ -11,103 +11,35 @@ export default function AdminPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [debugInfo, setDebugInfo] = useState({})
+  const [selectedEvent, setSelectedEvent] = useState(null)
+  const [eventDetails, setEventDetails] = useState(null)
+  const [editingParticipant, setEditingParticipant] = useState(null)
+  const [editForm, setEditForm] = useState({})
   const router = useRouter()
 
-  // ページ読み込み時に自動でデータを取得
   useEffect(() => {
     if (isAuthenticated) {
       fetchStats()
     }
   }, [isAuthenticated])
 
-  const handleLogin = async (e) => {
-    e.preventDefault()
-    if (password === 'soraadmin2025') { // 管理者パスワード
-      setIsAuthenticated(true)
-      setError('')
-      // ログイン後は自動でfetchStatsが呼ばれる
-    } else {
-      setError('パスワードが正しくありません')
-      setPassword('')
-    }
+const handleLogin = async (e) => {
+  e.preventDefault()
+  if (password === process.env.NEXT_PUBLIC_ADMIN_PASSWORD) {
+    setIsAuthenticated(true)
+    setError('')
+  } else {
+    setError('パスワードが正しくありません')
+    setPassword('')
   }
+}
 
-  const testFirestoreConnection = async () => {
-    try {
-      console.log('Testing Firestore connection...')
-      
-      const response = await fetch('/api/test-firestore', {
-        method: 'GET',
-        headers: {
-          'Cache-Control': 'no-cache',
-          'Pragma': 'no-cache',
-          'Accept': 'application/json'
-        }
-      })
-      
-      console.log('Test response status:', response.status)
-      console.log('Test response headers:', Object.fromEntries(response.headers.entries()))
-      
-      if (!response.ok) {
-        const errorText = await response.text()
-        console.error('Test API error response:', errorText)
-        throw new Error(`HTTP ${response.status}: ${errorText}`)
-      }
-      
-      const contentType = response.headers.get('content-type')
-      if (!contentType || !contentType.includes('application/json')) {
-        const responseText = await response.text()
-        console.error('Non-JSON response:', responseText)
-        throw new Error('APIが正しいJSONを返していません')
-      }
-      
-      const result = await response.json()
-      console.log('Firestore test result:', result)
-      
-      setDebugInfo(prev => ({
-        ...prev,
-        firestoreTest: result,
-        lastTestedAt: new Date().toLocaleString('ja-JP')
-      }))
-      
-      if (!result.success) {
-        setError(`Firestore接続エラー: ${result.error} - ${result.message}`)
-        return false
-      }
-      
-      return true
-    } catch (error) {
-      console.error('Firestore test failed:', error)
-      setError('Firestore接続テストに失敗しました: ' + error.message)
-      setDebugInfo(prev => ({
-        ...prev,
-        firestoreTest: {
-          success: false,
-          error: error.message,
-          timestamp: new Date().toISOString()
-        },
-        lastTestedAt: new Date().toLocaleString('ja-JP')
-      }))
-      return false
-    }
-  }
 
   const fetchStats = async () => {
     setLoading(true)
     setError('')
     
     try {
-      console.log('=== Starting admin stats fetch ===')
-      
-      // まずFirestore接続テストを実行
-      console.log('Testing Firestore connection first...')
-      const connectionOk = await testFirestoreConnection()
-      
-      if (!connectionOk) {
-        console.log('Connection test failed, but trying stats API anyway...')
-      }
-      
-      console.log('Fetching stats from API...')
       const response = await fetch('/api/admin/stats', {
         method: 'GET',
         headers: {
@@ -117,74 +49,98 @@ export default function AdminPage() {
         }
       })
       
-      console.log('Stats response status:', response.status)
-      console.log('Stats response headers:', Object.fromEntries(response.headers.entries()))
-      
       if (!response.ok) {
         const errorText = await response.text()
-        console.error('Stats API error response:', errorText)
         throw new Error(`Stats API Error - HTTP ${response.status}: ${errorText.substring(0, 200)}`)
       }
       
-      const contentType = response.headers.get('content-type')
-      if (!contentType || !contentType.includes('application/json')) {
-        const responseText = await response.text()
-        console.error('Stats API non-JSON response:', responseText.substring(0, 200))
-        throw new Error('Stats APIが正しいJSONを返していません')
-      }
-      
       const data = await response.json()
-      console.log('=== Stats data received ===')
-      console.log('Full response:', JSON.stringify(data, null, 2))
-      
-      if (data.success === false) {
-        throw new Error(data.message || data.error || 'Stats API returned error')
-      }
-      
-      // データの検証
-      console.log('Validating stats data...')
-      const validatedStats = {
-        nursing: data.nursing || { active: 0, cancelled: 0, overCapacity: 0, capacity: 30, total: 0 },
-        ivf: data.ivf || { active: 0, cancelled: 0, overCapacity: 0, capacity: 100, total: 0 },
-        golf: data.golf || { active: 0, cancelled: 0, overCapacity: 0, capacity: 16, total: 0 },
-        timestamp: data.timestamp,
-        success: data.success
-      }
-      
-      console.log('Validated stats:', validatedStats)
-      setStats(validatedStats)
-      
-      setDebugInfo(prev => ({
-        ...prev,
-        lastFetchAt: new Date().toLocaleString('ja-JP'),
-        statsResponse: data,
-        validatedStats: validatedStats
-      }))
+      setStats(data)
       
     } catch (error) {
-      console.error('=== Stats fetch error ===')
-      console.error('Error message:', error.message)
-      console.error('Error stack:', error.stack)
-      
+      console.error('Stats fetch error:', error)
       setError('データの取得に失敗しました: ' + error.message)
-      setDebugInfo(prev => ({
-        ...prev,
-        lastError: {
-          message: error.message,
-          stack: error.stack,
-          timestamp: new Date().toLocaleString('ja-JP')
-        }
-      }))
     } finally {
       setLoading(false)
     }
   }
 
+  const fetchEventDetails = async (eventType, timeSlot = null) => {
+    setLoading(true)
+    try {
+      let url = `/api/admin/participants?eventType=${eventType}`
+      if (timeSlot) {
+        url += `&timeSlot=${encodeURIComponent(timeSlot)}`
+      }
+      
+      const response = await fetch(url)
+      if (response.ok) {
+        const data = await response.json()
+        setEventDetails(data)
+        setSelectedEvent({ eventType, timeSlot })
+      } else {
+        const error = await response.json()
+        setError('参加者データの取得に失敗しました: ' + error.message)
+      }
+    } catch (error) {
+      setError('参加者データの取得でエラーが発生しました: ' + error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const handleEditParticipant = (participant) => {
+    setEditingParticipant(participant.id)
+    setEditForm({
+      lastName: participant.lastName || '',
+      firstName: participant.firstName || '',
+      lastNameKana: participant.lastNameKana || '',
+      firstNameKana: participant.firstNameKana || '',
+      email: participant.email || '',
+      phone: participant.phone || '',
+      organization: participant.organization || '',
+      selectedTimeSlot: participant.selectedTimeSlot || '',
+      specialRequests: participant.specialRequests || ''
+    })
+  }
+
+  const handleSaveEdit = async () => {
+    try {
+      setLoading(true)
+      const response = await fetch('/api/admin/update-participant', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          participantId: editingParticipant,
+          updates: editForm,
+          eventType: selectedEvent.eventType
+        })
+      })
+
+      if (response.ok) {
+        setEditingParticipant(null)
+        setEditForm({})
+        // データを再取得
+        await fetchEventDetails(selectedEvent.eventType, selectedEvent.timeSlot)
+      } else {
+        const error = await response.json()
+        setError('更新に失敗しました: ' + error.message)
+      }
+    } catch (error) {
+      setError('更新でエラーが発生しました: ' + error.message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // 削除機能を削除（この関数は使用しない）
+  // const handleDeleteParticipant = async (participantId) => { ... }
+
   const downloadCSV = async (eventType) => {
     setLoading(true)
-    setError('')
     try {
-      console.log(`Downloading CSV for ${eventType}...`)
       const response = await fetch(`/api/admin/export?eventType=${eventType}`)
       
       if (response.ok) {
@@ -197,44 +153,12 @@ export default function AdminPage() {
         a.click()
         document.body.removeChild(a)
         window.URL.revokeObjectURL(url)
-        console.log(`CSV downloaded successfully for ${eventType}`)
       } else {
         const error = await response.json()
-        throw new Error(error.error || 'CSV出力に失敗しました')
+        setError('CSV出力に失敗しました: ' + error.message)
       }
     } catch (error) {
-      console.error('CSV download error:', error)
       setError('CSV出力でエラーが発生しました: ' + error.message)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const downloadAllData = async () => {
-    setLoading(true)
-    setError('')
-    try {
-      console.log('Downloading all data CSV...')
-      const response = await fetch('/api/admin/export-all')
-      
-      if (response.ok) {
-        const blob = await response.blob()
-        const url = window.URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        a.download = `all_registrations_${new Date().toISOString().split('T')[0]}.csv`
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        window.URL.revokeObjectURL(url)
-        console.log('All data CSV downloaded successfully')
-      } else {
-        const error = await response.json()
-        throw new Error(error.error || '全データCSV出力に失敗しました')
-      }
-    } catch (error) {
-      console.error('All data CSV download error:', error)
-      setError('全データCSV出力でエラーが発生しました: ' + error.message)
     } finally {
       setLoading(false)
     }
@@ -246,18 +170,235 @@ export default function AdminPage() {
     const { active, capacity } = stats[eventType]
     const ratio = active / capacity
     
-    if (ratio >= 1) return '#dc3545' // 満員 - 赤
-    if (ratio >= 0.8) return '#ffc107' // 80%以上 - 黄
-    return '#28a745' // 余裕あり - 緑
+    if (ratio >= 1) return '#dc3545'
+    if (ratio >= 0.8) return '#ffc107'
+    return '#28a745'
   }
 
-  const toggleDebugInfo = () => {
-    setDebugInfo(prev => ({
-      ...prev,
-      showDebug: !prev.showDebug
-    }))
+  const renderEventDetails = () => {
+    if (!eventDetails || !selectedEvent) return null
+
+    return (
+      <div className={styles.eventDetailsModal}>
+        <div className={styles.modalContent}>
+          <div className={styles.modalHeader}>
+            <h2>
+              {selectedEvent.eventType === 'nursing' && '看護学会見学ツアー'}
+              {selectedEvent.eventType === 'ivf' && `IVF学会見学ツアー ${selectedEvent.timeSlot || ''}`}
+              {selectedEvent.eventType === 'golf' && 'ゴルフコンペ'}
+              参加者一覧
+            </h2>
+            <button 
+              onClick={() => setSelectedEvent(null)}
+              className={styles.closeButton}
+            >
+              ✕
+            </button>
+          </div>
+          
+          <div className={styles.participantsList}>
+            <div className={styles.participantsHeader}>
+              <span>合計 {eventDetails.participants.length}名</span>
+              <button 
+                onClick={() => downloadCSV(selectedEvent.eventType)}
+                className={styles.downloadButton}
+              >
+                CSV出力
+              </button>
+            </div>
+
+            <div className={styles.participantsTable}>
+              <table>
+                <thead>
+                  <tr>
+                    <th>No.</th>
+                    <th>名前</th>
+                    <th>カナ</th>
+                    <th>メール</th>
+                    <th>電話</th>
+                    <th>所属</th>
+                    {selectedEvent.eventType === 'ivf' && <th>希望時間</th>}
+                    {selectedEvent.eventType === 'golf' && <th>グループ</th>}
+                    <th>状態</th>
+                    <th>操作</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {eventDetails.participants.map((participant, index) => (
+                    <tr key={participant.id}>
+                      <td>{index + 1}</td>
+                      <td>
+                        {editingParticipant === participant.id ? (
+                          <div className={styles.editField}>
+                            <input
+                              type="text"
+                              value={editForm.lastName}
+                              onChange={(e) => setEditForm({...editForm, lastName: e.target.value})}
+                              placeholder="姓"
+                            />
+                            <input
+                              type="text"
+                              value={editForm.firstName}
+                              onChange={(e) => setEditForm({...editForm, firstName: e.target.value})}
+                              placeholder="名"
+                            />
+                          </div>
+                        ) : (
+                          <div>
+                            {selectedEvent.eventType === 'golf' ? (
+                              <div>
+                                <div>{participant.fullName || `${participant.lastName || ''} ${participant.firstName || ''}`}</div>
+                                {participant.isRepresentative && (
+                                  <span className={styles.representativeBadge}>代表者</span>
+                                )}
+                              </div>
+                            ) : (
+                              `${participant.lastName || ''} ${participant.firstName || ''}`
+                            )}
+                          </div>
+                        )}
+                      </td>
+                      <td>
+                        {editingParticipant === participant.id ? (
+                          <div className={styles.editField}>
+                            <input
+                              type="text"
+                              value={editForm.lastNameKana}
+                              onChange={(e) => setEditForm({...editForm, lastNameKana: e.target.value})}
+                              placeholder="姓カナ"
+                            />
+                            <input
+                              type="text"
+                              value={editForm.firstNameKana}
+                              onChange={(e) => setEditForm({...editForm, firstNameKana: e.target.value})}
+                              placeholder="名カナ"
+                            />
+                          </div>
+                        ) : (
+                          selectedEvent.eventType === 'golf' ? 
+                            (participant.fullNameKana || `${participant.lastNameKana || ''} ${participant.firstNameKana || ''}`) :
+                            `${participant.lastNameKana || ''} ${participant.firstNameKana || ''}`
+                        )}
+                      </td>
+                      <td>
+                        {editingParticipant === participant.id ? (
+                          <input
+                            type="email"
+                            value={editForm.email}
+                            onChange={(e) => setEditForm({...editForm, email: e.target.value})}
+                            className={styles.editInput}
+                          />
+                        ) : (
+                          participant.email
+                        )}
+                      </td>
+                      <td>
+                        {editingParticipant === participant.id ? (
+                          <input
+                            type="tel"
+                            value={editForm.phone}
+                            onChange={(e) => setEditForm({...editForm, phone: e.target.value})}
+                            className={styles.editInput}
+                          />
+                        ) : (
+                          participant.phone
+                        )}
+                      </td>
+                      <td>
+                        {editingParticipant === participant.id ? (
+                          <input
+                            type="text"
+                            value={editForm.organization}
+                            onChange={(e) => setEditForm({...editForm, organization: e.target.value})}
+                            className={styles.editInput}
+                          />
+                        ) : (
+                          participant.organization || participant.companyName
+                        )}
+                      </td>
+                      {selectedEvent.eventType === 'ivf' && (
+                        <td>
+                          {editingParticipant === participant.id ? (
+                            <select
+                              value={editForm.selectedTimeSlot}
+                              onChange={(e) => setEditForm({...editForm, selectedTimeSlot: e.target.value})}
+                              className={styles.editSelect}
+                            >
+                              <option value="2025年10月10日（金）14:00">2025年10月10日（金）14:00</option>
+                              <option value="2025年10月11日（土）09:00">2025年10月11日（土）09:00</option>
+                              <option value="2025年10月12日（日）09:00">2025年10月12日（日）09:00</option>
+                              <option value="2025年10月12日（日）13:00">2025年10月12日（日）13:00</option>
+                              <option value="2025年10月13日（月）14:00">2025年10月13日（月）14:00</option>
+                            </select>
+                          ) : (
+                            <span className={styles.timeSlotDisplay}>
+                              {participant.selectedTimeSlot?.replace('2025年10月', '') || '未選択'}
+                            </span>
+                          )}
+                        </td>
+                      )}
+                      {selectedEvent.eventType === 'golf' && (
+                        <td>
+                          <div className={styles.golfGroupInfo}>
+                            <div>ID: {participant.groupId}</div>
+                            <div>参加者番号: {participant.participantNumber || 1}</div>
+                            <div>グループ人数: {participant.totalGroupSize || 1}名</div>
+                          </div>
+                        </td>
+                      )}
+                      <td>
+                        <span className={`${styles.statusBadge} ${styles[participant.status || 'active']}`}>
+                          {participant.status === 'active' ? 'アクティブ' : 
+                           participant.status === 'cancelled' ? 'キャンセル' : '定員超過'}
+                        </span>
+                      </td>
+                      <td>
+                        {editingParticipant === participant.id ? (
+                          <div className={styles.editActions}>
+                            <button 
+                              onClick={handleSaveEdit}
+                              className={styles.saveButton}
+                              disabled={loading}
+                            >
+                              {loading ? '保存中...' : '保存'}
+                            </button>
+                            <button 
+                              onClick={() => {
+                                setEditingParticipant(null)
+                                setEditForm({})
+                              }}
+                              className={styles.cancelButton}
+                            >
+                              キャンセル
+                            </button>
+                          </div>
+                        ) : (
+                          <div className={styles.actions}>
+                            <button 
+                              onClick={() => handleEditParticipant(participant)}
+                              className={styles.editButton}
+                            >
+                              ✏️ 編集
+                            </button>
+                            {/* 削除ボタンを削除 */}
+                            <span className={styles.readOnlyNote}>
+                              削除無効
+                            </span>
+                          </div>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
+  // 以下は既存のコードと同じ（ログイン、統計表示など）
   if (!isAuthenticated) {
     return (
       <div className={styles.loginContainer}>
@@ -292,13 +433,6 @@ export default function AdminPage() {
         <h1>申し込み状況管理</h1>
         <div className={styles.headerButtons}>
           <button 
-            onClick={testFirestoreConnection} 
-            className={styles.testButton}
-            disabled={loading}
-          >
-            {loading ? 'テスト中...' : '🔗 接続テスト'}
-          </button>
-          <button 
             onClick={fetchStats} 
             className={styles.refreshButton}
             disabled={loading}
@@ -306,18 +440,13 @@ export default function AdminPage() {
             {loading ? '更新中...' : '🔄 データ更新'}
           </button>
           <button 
-            onClick={toggleDebugInfo} 
-            className={styles.debugButton}
-          >
-            🐛 デバッグ情報
-          </button>
-          <button 
             onClick={() => {
               setIsAuthenticated(false)
               setStats(null)
+              setSelectedEvent(null)
+              setEventDetails(null)
               setPassword('')
               setError('')
-              setDebugInfo({})
             }} 
             className={styles.logoutButton}
           >
@@ -329,47 +458,6 @@ export default function AdminPage() {
       {error && (
         <div className={styles.errorMessage}>
           ❌ {error}
-        </div>
-      )}
-
-      {/* デバッグ情報表示 */}
-      {debugInfo.showDebug && (
-        <div className={styles.debugInfo}>
-          <h3>🐛 デバッグ情報</h3>
-          <div className={styles.debugContent}>
-            <div className={styles.debugSection}>
-              <h4>Firestore接続テスト</h4>
-              <pre>{JSON.stringify(debugInfo.firestoreTest, null, 2)}</pre>
-              <p>最終テスト時刻: {debugInfo.lastTestedAt || 'なし'}</p>
-            </div>
-            
-            <div className={styles.debugSection}>
-              <h4>Stats API レスポンス</h4>
-              <pre>{JSON.stringify(debugInfo.statsResponse, null, 2)}</pre>
-              <p>最終取得時刻: {debugInfo.lastFetchAt || 'なし'}</p>
-            </div>
-            
-            <div className={styles.debugSection}>
-              <h4>検証済みStats</h4>
-              <pre>{JSON.stringify(debugInfo.validatedStats, null, 2)}</pre>
-            </div>
-            
-            {debugInfo.lastError && (
-              <div className={styles.debugSection}>
-                <h4>最新エラー</h4>
-                <div className={styles.errorDetails}>
-                  <p><strong>メッセージ:</strong> {debugInfo.lastError.message}</p>
-                  <p><strong>時刻:</strong> {debugInfo.lastError.timestamp}</p>
-                  {debugInfo.lastError.stack && (
-                    <details>
-                      <summary>スタックトレース</summary>
-                      <pre>{debugInfo.lastError.stack}</pre>
-                    </details>
-                  )}
-                </div>
-              </div>
-            )}
-          </div>
         </div>
       )}
 
@@ -410,18 +498,21 @@ export default function AdminPage() {
                   <span>⚠️ 定員超過:</span>
                   <span>{stats.nursing?.overCapacity || 0}件</span>
                 </div>
-                <div className={styles.statRow}>
-                  <span><strong>📊 合計:</strong></span>
-                  <span><strong>{stats.nursing?.total || 0}件</strong></span>
-                </div>
               </div>
-              <button 
-                onClick={() => downloadCSV('nursing')} 
-                className={styles.downloadButton}
-                disabled={loading}
-              >
-                📥 CSV出力
-              </button>
+              <div className={styles.cardActions}>
+                <button 
+                  onClick={() => fetchEventDetails('nursing')}
+                  className={styles.detailButton}
+                >
+                  📋 参加者一覧
+                </button>
+                <button 
+                  onClick={() => downloadCSV('nursing')} 
+                  className={styles.downloadButton}
+                >
+                  📥 CSV出力
+                </button>
+              </div>
             </div>
 
             {/* IVF学会見学ツアー */}
@@ -445,6 +536,30 @@ export default function AdminPage() {
                   }}
                 ></div>
               </div>
+              
+              {/* IVF時間帯別詳細 */}
+              {stats.ivf?.timeSlots && (
+                <div className={styles.timeSlotsBreakdown}>
+                  <h4>時間帯別詳細</h4>
+                  {Object.entries(stats.ivf.timeSlots).map(([timeSlot, data]) => (
+                    <div key={timeSlot} className={styles.timeSlotRow}>
+                      <span className={styles.timeSlotLabel}>
+                        {timeSlot.replace('2025年10月', '')}
+                      </span>
+                      <span className={styles.timeSlotCount}>
+                        {data.count}/{data.capacity}
+                      </span>
+                      <button 
+                        onClick={() => fetchEventDetails('ivf', timeSlot)}
+                        className={styles.timeSlotDetailButton}
+                      >
+                        詳細
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
               <div className={styles.statDetails}>
                 <div className={styles.statRow}>
                   <span>✅ アクティブ:</span>
@@ -458,18 +573,21 @@ export default function AdminPage() {
                   <span>⚠️ 定員超過:</span>
                   <span>{stats.ivf?.overCapacity || 0}件</span>
                 </div>
-                <div className={styles.statRow}>
-                  <span><strong>📊 合計:</strong></span>
-                  <span><strong>{stats.ivf?.total || 0}件</strong></span>
-                </div>
               </div>
-              <button 
-                onClick={() => downloadCSV('ivf')} 
-                className={styles.downloadButton}
-                disabled={loading}
-              >
-                📥 CSV出力
-              </button>
+              <div className={styles.cardActions}>
+                <button 
+                  onClick={() => fetchEventDetails('ivf')}
+                  className={styles.detailButton}
+                >
+                  📋 全参加者一覧
+                </button>
+                <button 
+                  onClick={() => downloadCSV('ivf')} 
+                  className={styles.downloadButton}
+                >
+                  📥 CSV出力
+                </button>
+              </div>
             </div>
 
             {/* ゴルフコンペ */}
@@ -506,35 +624,24 @@ export default function AdminPage() {
                   <span>⚠️ 定員超過:</span>
                   <span>{stats.golf?.overCapacity || 0}件</span>
                 </div>
-                <div className={styles.statRow}>
-                  <span><strong>📊 合計:</strong></span>
-                  <span><strong>{stats.golf?.total || 0}件</strong></span>
-                </div>
               </div>
-              <button 
-                onClick={() => downloadCSV('golf')} 
-                className={styles.downloadButton}
-                disabled={loading}
-              >
-                📥 CSV出力
-              </button>
+              <div className={styles.cardActions}>
+                <button 
+                  onClick={() => fetchEventDetails('golf')}
+                  className={styles.detailButton}
+                >
+                  📋 参加者一覧
+                </button>
+                <button 
+                  onClick={() => downloadCSV('golf')} 
+                  className={styles.downloadButton}
+                >
+                  📥 CSV出力
+                </button>
+              </div>
             </div>
           </div>
 
-          {/* 全データ出力セクション */}
-          <div className={styles.allDataSection}>
-            <h3>📋 全データ出力</h3>
-            <p>全イベントの申し込みデータを統合したCSVファイルをダウンロードします</p>
-            <button 
-              onClick={downloadAllData} 
-              className={styles.downloadAllButton}
-              disabled={loading}
-            >
-              📊 全イベント統合CSV出力
-            </button>
-          </div>
-
-          {/* 最終更新時刻 */}
           <div className={styles.lastUpdated}>
             <small>最終更新: {new Date().toLocaleString('ja-JP')}</small>
           </div>
@@ -558,6 +665,8 @@ export default function AdminPage() {
           <p>処理中...</p>
         </div>
       )}
+
+      {renderEventDetails()}
     </div>
   )
 }
