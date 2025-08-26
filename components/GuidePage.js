@@ -60,7 +60,7 @@ export default function GuidePage({ onNext }) {
             <img src="/img/landscape.webp" alt="" className={styles.sectionIcon} />
             開催概要
           </h2>
-          <p>第23回日本生殖看護学会学術集会終了の翌日に、「空の森クリニック施設見学」を開催いたします。</p>
+          <p>第23回日本生殖看護学会学術集会終了当日14時より「空の森クリニック施設見学ツアー」を開催いたします。</p>
           <p>自然に包まれた空間での医療を実際にご体感いただく良い機会となりますので、皆様のご参加をお待ちしております。</p>
         </div>
 
