@@ -23,12 +23,22 @@ async function getStats() {
     const eventTypes = ['nursing', 'ivf', 'golf']
     const MAX_ENTRIES = { nursing: 30, ivf: 100, golf: 16 }
 
+    // 時間帯ごとの定員
+    const TIME_SLOT_CAPACITY = {
+      '2025年10月10日（金）14:00': 20,
+      '2025年10月11日（土）09:00': 20,
+      '2025年10月12日（日）09:00': 20,
+      '2025年10月12日（日）13:00': 20,
+      '2025年10月13日（月）14:00': 20
+    }
+
     for (const eventType of eventTypes) {
       console.log(`\n=== Processing stats for ${eventType} ===`)
       
       let activeCount = 0
       let cancelledCount = 0
       let overCapacityCount = 0
+      let timeSlotBreakdown = {}
 
       try {
         // アクティブ数を取得
@@ -49,6 +59,33 @@ async function getStats() {
             const data = doc.data()
             console.log(`  - ID: ${doc.id}, uniqueId: ${data.uniqueId}, status: ${data.status}`)
           })
+        }
+
+        // IVFの場合は時間帯別の内訳も取得
+        if (eventType === 'ivf') {
+          console.log('Calculating IVF time slot breakdown...')
+          
+          // 時間帯別の初期化
+          Object.keys(TIME_SLOT_CAPACITY).forEach(timeSlot => {
+            timeSlotBreakdown[timeSlot] = {
+              count: 0,
+              capacity: TIME_SLOT_CAPACITY[timeSlot],
+              remaining: TIME_SLOT_CAPACITY[timeSlot]
+            }
+          })
+
+          // アクティブなドキュメントから時間帯別カウント
+          activeSnapshot.docs.forEach(doc => {
+            const data = doc.data()
+            const timeSlot = data.selectedTimeSlot
+            if (timeSlot && timeSlotBreakdown[timeSlot]) {
+              timeSlotBreakdown[timeSlot].count++
+              timeSlotBreakdown[timeSlot].remaining = Math.max(0, 
+                TIME_SLOT_CAPACITY[timeSlot] - timeSlotBreakdown[timeSlot].count)
+            }
+          })
+
+          console.log('Time slot breakdown:', timeSlotBreakdown)
         }
         
       } catch (e) {
@@ -91,7 +128,8 @@ async function getStats() {
         cancelled: cancelledCount,
         overCapacity: overCapacityCount,
         capacity: MAX_ENTRIES[eventType],
-        total: activeCount + cancelledCount + overCapacityCount
+        total: activeCount + cancelledCount + overCapacityCount,
+        ...(eventType === 'ivf' && { timeSlots: timeSlotBreakdown })
       }
 
       console.log(`${eventType} final stats:`, stats[eventType])
@@ -111,7 +149,10 @@ async function getStats() {
     // Firebase接続失敗時は空のデータを返す
     const fallbackStats = {
       nursing: { active: 0, cancelled: 0, overCapacity: 0, capacity: 30, total: 0, error: firebaseError.message },
-      ivf: { active: 0, cancelled: 0, overCapacity: 0, capacity: 100, total: 0, error: firebaseError.message },
+      ivf: { 
+        active: 0, cancelled: 0, overCapacity: 0, capacity: 100, total: 0, error: firebaseError.message,
+        timeSlots: {}
+      },
       golf: { active: 0, cancelled: 0, overCapacity: 0, capacity: 16, total: 0, error: firebaseError.message }
     }
     
@@ -177,7 +218,10 @@ export default async function handler(req, res) {
       success: true,
       timestamp: new Date().toISOString(),
       nursing: statsResult.nursing || { active: 0, cancelled: 0, overCapacity: 0, capacity: 30, total: 0 },
-      ivf: statsResult.ivf || { active: 0, cancelled: 0, overCapacity: 0, capacity: 100, total: 0 },
+      ivf: statsResult.ivf || { 
+        active: 0, cancelled: 0, overCapacity: 0, capacity: 100, total: 0,
+        timeSlots: {}
+      },
       golf: statsResult.golf || { active: 0, cancelled: 0, overCapacity: 0, capacity: 16, total: 0 },
       debug: {
         processedEventTypes: Object.keys(statsResult),
@@ -203,7 +247,10 @@ export default async function handler(req, res) {
       message: error.message,
       timestamp: new Date().toISOString(),
       nursing: { active: 0, cancelled: 0, overCapacity: 0, capacity: 30, total: 0 },
-      ivf: { active: 0, cancelled: 0, overCapacity: 0, capacity: 100, total: 0 },
+      ivf: { 
+        active: 0, cancelled: 0, overCapacity: 0, capacity: 100, total: 0,
+        timeSlots: {}
+      },
       golf: { active: 0, cancelled: 0, overCapacity: 0, capacity: 16, total: 0 }
     }
     

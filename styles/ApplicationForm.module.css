@@ -1,15 +1,15 @@
+/* styles/ApplicationForm.module.css */
 .container {
-  padding: 0;
   min-height: 100vh;
-  position: relative;
-  z-index: 10;
+  background: linear-gradient(135deg, #f0f4f8 0%, #e8f2f7 100%);
+  font-family: 'Noto Serif JP', serif;
 }
 
 .header {
-  text-align: center;
-  padding: 60px 20px 40px;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+  background: linear-gradient(135deg, #00104d 0%, #1e3a8a 100%);
   color: white;
+  padding: 2rem;
+  text-align: center;
   position: relative;
   overflow: hidden;
 }
@@ -18,534 +18,629 @@
   content: '';
   position: absolute;
   top: -20px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 200px;
-  height: 200px;
-  opacity: 0.15;
-  z-index: 1;
-  animation: pulse 8s ease-in-out infinite;
+  right: -20px;
+  width: 120px;
+  height: 120px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 50%;
+  animation: pulse 4s ease-in-out infinite;
 }
 
 .logoContainer {
+  margin-bottom: 1rem;
   position: relative;
   z-index: 2;
-  margin-bottom: 30px;
 }
 
 .logo {
-  max-height: 160px;
+  height: 60px;
   width: auto;
-  filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.3));
+  filter: brightness(0) invert(1);
 }
 
 .header h1 {
-  font-size: 24px;
-  margin-bottom: 12px;
-  font-weight: 700;
+  font-size: 1.8rem;
+  margin-bottom: 0.5rem;
+  font-weight: 600;
   position: relative;
   z-index: 2;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .header p {
-  font-size: 16px;
-  opacity: 0.95;
+  font-size: 1rem;
+  opacity: 0.9;
   position: relative;
   z-index: 2;
-  font-weight: 500;
 }
 
 .content {
   max-width: 800px;
   margin: 0 auto;
-  padding: 40px 20px;
-  position: relative;
-  z-index: 2;
+  padding: 2rem;
 }
 
 .form {
-  background: transparent;
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 8px 32px rgba(0, 16, 77, 0.1);
 }
 
 .section {
-  margin-bottom: 40px;
-  padding: 40px 30px;
-  background: transparent;
-  position: relative;
-  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.section::before {
-  content: '';
-  position: absolute;
-  top: -30px;
-  right: -30px;
-  width: 140px;
-  height: 140px;
-  opacity: 0.12;
-  z-index: 1;
-  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.section:nth-child(1)::before {
-  background: url('/img/landscape.webp') center/contain no-repeat;
-}
-
-.section:nth-child(2)::before {
-  background: url('/img/月と星.webp') center/contain no-repeat;
+  margin-bottom: 2.5rem;
 }
 
 .section h2 {
-  font-size: 22px;
-  margin-bottom: 20px;
-  color: var(--primary-color);
-  font-weight: 700;
-  position: relative;
-  z-index: 2;
   display: flex;
   align-items: center;
-}
-
-.section h2::after {
-  content: '';
-  flex: 1;
-  height: 2px;
-  background: linear-gradient(90deg, var(--accent-color) 0%, transparent 100%);
-  margin-left: 20px;
+  font-size: 1.3rem;
+  font-weight: 600;
+  color: #00104d;
+  margin-bottom: 1.5rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 2px solid #e9ecef;
 }
 
 .sectionIcon {
-  width: 28px;
-  height: 28px;
-  margin-right: 12px;
-  opacity: 0.8;
-  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
+  width: 24px;
+  height: 24px;
+  margin-right: 0.5rem;
 }
 
 .fieldGroup {
-  margin-bottom: 20px;
-  position: relative;
-  z-index: 2;
+  margin-bottom: 1.5rem;
 }
 
 .label {
   display: block;
-  margin-bottom: 8px;
   font-weight: 600;
-  color: var(--text-color);
-  font-size: 14px;
-  position: relative;
+  color: #333;
+  margin-bottom: 0.5rem;
+  font-size: 0.95rem;
 }
 
-.label::before {
-  content: '●';
-  color: var(--accent-color);
-  font-size: 8px;
-  margin-right: 6px;
+.required {
+  color: #dc3545;
+  margin-left: 0.25rem;
 }
 
-.input {
+.input,
+.textarea,
+.select {
   width: 100%;
-  padding: 14px;
+  padding: 0.75rem;
   border: 2px solid #e9ecef;
   border-radius: 8px;
-  font-size: 16px;
-  transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  font-family: inherit;
+  font-size: 1rem;
+  transition: border-color 0.3s ease, box-shadow 0.3s ease;
+  background: white;
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
 }
 
 .textarea {
-  width: 100%;
-  padding: 14px;
-  border: 2px solid #e9ecef;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  font-family: inherit;
   resize: vertical;
-}
-
-.select {
-  width: 100%;
-  padding: 14px;
-  border: 2px solid #e9ecef;
-  border-radius: 8px;
-  font-size: 16px;
-  transition: all 0.3s ease;
-  background: rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(10px);
-  font-family: inherit;
-}
-
-.input:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(0, 16, 77, 0.1);
-  background: rgba(255, 255, 255, 0.95);
-}
-
-.textarea:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(0, 16, 77, 0.1);
-  background: rgba(255, 255, 255, 0.95);
-}
-
-.select:focus {
-  outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 3px rgba(0, 16, 77, 0.1);
-  background: rgba(255, 255, 255, 0.95);
+  min-height: 100px;
 }
 
 .inputError {
-  border-color: #dc3545;
-  background: rgba(255, 245, 245, 0.9);
+  border-color: #dc3545 !important;
+  box-shadow: 0 0 0 3px rgba(220, 53, 69, 0.1) !important;
 }
 
 .error {
-  color: #dc3545;
-  font-size: 12px;
-  margin-top: 5px;
   display: block;
+  color: #dc3545;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
   font-weight: 500;
 }
 
 .note {
+  display: block;
+  color: #6c757d;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  font-style: italic;
+}
+
+/* 時間帯選択用のスタイル */
+.timeSlotGrid {
+  display: grid;
+  gap: 12px;
+}
+
+.timeSlotOption {
+  display: block;
+  padding: 16px;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: white;
+  position: relative;
+}
+
+.timeSlotOption:hover:not(.fullSlot) {
+  border-color: #007bff;
+  background: #f8f9fa;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 123, 255, 0.15);
+}
+
+.timeSlotOption input[type="radio"] {
+  margin-right: 12px;
+  transform: scale(1.2);
+  accent-color: #007bff;
+}
+
+.selectedSlot {
+  border-color: #007bff !important;
+  background: #f0f8ff !important;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.timeSlotInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.timeSlotLabel {
+  font-weight: 600;
+  font-size: 15px;
+  color: #333;
+}
+
+.timeSlotCapacity {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+}
+
+.fullSlot {
+  border-color: #dc3545 !important;
+  background: #fff5f5 !important;
+  cursor: not-allowed;
+  opacity: 0.7;
+}
+
+.fullSlot input[type="radio"] {
+  cursor: not-allowed;
+}
+
+.lowCapacitySlot {
+  border-color: #ffc107;
+  background: #fffbf0;
+}
+
+.fullText {
+  color: #dc3545;
+  font-weight: 600;
+}
+
+.lowText {
+  color: #856404;
+  font-weight: 600;
+}
+
+.availableText {
+  color: #28a745;
+  font-weight: 600;
+}
+
+.loadingText {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.capacityDetail {
   color: #6c757d;
   font-size: 12px;
-  margin-top: 4px;
-  display: block;
-  font-style: italic;
+}
+
+.fullBadge,
+.lowBadge {
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  padding: 4px 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.fullBadge {
+  background: #dc3545;
+  color: white;
+}
+
+.lowBadge {
+ background: #ffc107;
+ color: #856404;
 }
 
 .buttons {
-  display: flex;
-  gap: 15px;
-  margin: 40px 0 20px;
-  justify-content: center;
-  max-width: 400px;
-  margin-left: auto;
-  margin-right: auto;
+ display: flex;
+ gap: 1rem;
+ justify-content: center;
+ margin-top: 2rem;
+ padding-top: 2rem;
+ border-top: 1px solid #e9ecef;
+}
+
+.backButton,
+.submitButton {
+ padding: 0.75rem 2rem;
+ border: none;
+ border-radius: 8px;
+ font-size: 1rem;
+ font-weight: 600;
+ cursor: pointer;
+ transition: all 0.3s ease;
+ min-width: 120px;
 }
 
 .backButton {
-  flex: 1;
-  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
-  color: white;
-  border: none;
-  padding: 15px 30px;
-  font-size: 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-weight: 500;
-  font-family: inherit;
+ background: #6c757d;
+ color: white;
 }
 
 .backButton:hover {
-  background: linear-gradient(135deg, #5a6268 0%, #495057 100%);
-  transform: translateY(-2px);
+ background: #5a6268;
+ transform: translateY(-2px);
+ box-shadow: 0 4px 12px rgba(108, 117, 125, 0.3);
 }
 
 .submitButton {
-  flex: 2;
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
-  color: white;
-  border: none;
-  padding: 15px 30px;
-  font-size: 16px;
-  font-weight: 600;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 4px 15px rgba(0, 16, 77, 0.3);
-  text-transform: uppercase;
-  letter-spacing: 1px;
-  font-family: inherit;
+ background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+ color: white;
 }
 
-.submitButton:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(0, 16, 77, 0.4);
-  background: linear-gradient(135deg, var(--secondary-color) 0%, var(--accent-color) 100%);
+.submitButton:hover:not(:disabled) {
+ background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+ transform: translateY(-2px);
+ box-shadow: 0 4px 12px rgba(0, 123, 255, 0.3);
 }
 
-@media (min-width: 768px) {
-  .header {
-    padding: 80px 40px 60px;
-  }
-  
-  .header h1 {
-    font-size: 32px;
-  }
-  
-  .header p {
-    font-size: 18px;
-  }
-  
-  .logo {
-    max-height: 100px;
-  }
-  
-  .content {
-    padding: 60px 40px;
-  }
-  
-  .section {
-    padding: 50px 40px;
-  }
-  
-  .section::before {
-    width: 160px;
-    height: 160px;
-    top: -40px;
-    right: -40px;
-  }
-  
-  .section h2 {
-    font-size: 24px;
-  }
-}
-.eventInfo {
-  background: rgba(255, 255, 255, 0.15);
-  backdrop-filter: blur(10px);
-  padding: 25px;
-  border-radius: 12px;
-  margin-top: 30px;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  text-align: center;
+.submitButton:disabled {
+ background: #6c757d;
+ cursor: not-allowed;
+ transform: none;
+ box-shadow: none;
 }
 
-.eventDetails p {
-  color: rgba(255, 255, 255, 0.95);
-  font-size: 16px;
-  margin-bottom: 8px;
-  font-weight: 500;
-}
-
-.organizerMessage {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  padding: 40px 30px;
-  border-radius: 12px;
-  margin-bottom: 40px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  position: relative;
-  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.organizerMessage::before {
-  content: '';
-  position: absolute;
-  top: -30px;
-  right: -30px;
-  width: 140px;
-  height: 140px;
-  background: url('/img/ガーベラ.webp') center/contain no-repeat;
-  opacity: 0.12;
-  z-index: 1;
-  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.organizerMessage h2 {
-  font-size: 22px;
-  margin-bottom: 20px;
-  color: var(--primary-color);
-  font-weight: 700;
-  position: relative;
-  z-index: 2;
-  display: flex;
-  align-items: center;
-}
-
-.organizerMessage h2::after {
-  content: '';
-  flex: 1;
-  height: 2px;
-  background: linear-gradient(90deg, var(--accent-color) 0%, transparent 100%);
-  margin-left: 20px;
-}
-
-.message {
-  text-align: left;
-  position: relative;
-  z-index: 2;
-}
-
-.message p {
-  color: #495057;
-  font-size: 16px;
-  line-height: 1.7;
-  margin-bottom: 15px;
-}
-
-.organizer {
-  margin-top: 25px;
-  padding-top: 20px;
-  border-top: 2px solid rgba(0, 16, 77, 0.1);
-  text-align: right;
-}
-
-.organizer p {
-  color: var(--primary-color);
-  font-size: 14px;
-  margin-bottom: 5px;
-  font-weight: 600;
-}
-/* 既存のスタイルに以下を追加 */
-
-.capacityInfo {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  padding: 25px;
-  border-radius: 12px;
-  margin-bottom: 30px;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  text-align: center;
-}
-
-.capacityInfo h3 {
-  color: var(--primary-color);
-  margin-bottom: 10px;
-  font-size: 18px;
-}
-
-.capacityInfo p {
-  margin: 8px 0;
-  font-size: 16px;
-  color: #495057;
-}
-
-.capacityInfo strong {
-  color: var(--accent-color);
-  font-size: 20px;
-}
-
-.warning {
-  color: #ff9800 !important;
-  font-weight: 600;
-}
-
-.full {
-  color: #dc3545 !important;
-  font-weight: 600;
-}
-
-.participantNote {
-  background: rgba(255, 243, 205, 0.3);
-  padding: 15px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  border-left: 4px solid #ffc107;
-}
-
-.participantNote p {
-  margin: 5px 0;
-  font-size: 14px;
-  color: #856404;
-}
-
+/* 参加者情報用のスタイル（ゴルフ用） */
 .participantGroup {
-  background: rgba(255, 255, 255, 0.05);
-  padding: 20px;
-  border-radius: 8px;
-  margin-bottom: 20px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+ background: #f8f9fa;
+ padding: 1.5rem;
+ border-radius: 8px;
+ margin-bottom: 1rem;
+ border-left: 4px solid #007bff;
 }
 
 .participantGroup h4 {
-  color: var(--primary-color);
-  margin-bottom: 15px;
-  font-size: 16px;
+ color: #00104d;
+ margin-bottom: 1rem;
+ font-size: 1.1rem;
+ font-weight: 600;
 }
 
-.totalParticipants {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  padding: 20px;
-  border-radius: 12px;
-  text-align: center;
-  border: 1px solid rgba(255, 255, 255, 0.2);
+/* 定員情報表示 */
+.capacityInfo {
+ background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
+ padding: 1.5rem;
+ border-radius: 12px;
+ margin-bottom: 2rem;
+ border: 1px solid #bbdefb;
 }
 
-.totalParticipants h3 {
-  color: var(--primary-color);
-  margin-bottom: 10px;
+.capacityInfo h3 {
+ color: #00104d;
+ margin-bottom: 0.5rem;
+ font-size: 1.1rem;
+ font-weight: 600;
 }
 
-.totalParticipants p {
-  color: #495057;
-  margin: 5px 0;
+.capacityInfo p {
+ color: #333;
+ margin: 0;
+ line-height: 1.6;
 }
-
-.submitButton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-}
-/* 既存のスタイルに追加 */
-
-.lastUpdate {
-  font-size: 12px;
-  color: #666;
-  margin: 5px 0;
-  font-style: italic;
-}
-
-.error {
-  color: #dc3545;
-  font-size: 12px;
-  margin-top: 5px;
-  display: block;
-  font-weight: 500;
-}
-/* styles/ApplicationForm.module.css に以下を追加 */
 
 .fullCapacityNotice {
-  background: rgba(220, 53, 69, 0.1);
-  backdrop-filter: blur(10px);
-  border: 2px solid rgba(220, 53, 69, 0.3);
-  border-radius: 12px;
-  padding: 20px;
-  margin: 15px 0;
-  text-align: center;
+ background: #f8d7da;
+ padding: 1rem;
+ border-radius: 8px;
+ margin-top: 1rem;
+ border: 1px solid #f5c6cb;
 }
 
 .fullNotice {
-  color: #dc3545;
-  font-weight: 600;
-  margin: 0;
-  font-size: 16px;
+ color: #721c24;
+ font-weight: 600;
+ margin: 0;
+ font-size: 0.95rem;
 }
 
 .errorNotice {
-  color: #dc3545;
-  font-weight: 500;
-  margin: 10px 0;
+ background: #fff3cd;
+ color: #856404;
+ padding: 1rem;
+ border-radius: 8px;
+ margin-top: 1rem;
+ border: 1px solid #ffeaa7;
+ font-size: 0.9rem;
 }
 
 .warning {
-  color: #ff9800 !important;
-  font-weight: 600;
+ color: #856404;
+ font-weight: 600;
+ background: #fff3cd;
+ padding: 0.5rem 1rem;
+ border-radius: 6px;
+ margin-top: 0.5rem;
+ font-size: 0.9rem;
 }
 
-.submitButton:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
-  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
+/* 合計人数表示 */
+.totalParticipants {
+ background: #e8f5e8;
+ padding: 1rem;
+ border-radius: 8px;
+ text-align: center;
+ border: 2px solid #c3e6cb;
 }
 
-.submitButton:disabled:hover {
-  background: linear-gradient(135deg, #6c757d 0%, #5a6268 100%);
-  transform: none;
-  box-shadow: none;
+.totalParticipants h3 {
+ color: #155724;
+ margin-bottom: 0.5rem;
+ font-size: 1.2rem;
+}
+
+.totalParticipants p {
+ color: #155724;
+ margin: 0;
+ font-size: 0.9rem;
+}
+
+.participantNote {
+ background: #fff3cd;
+ padding: 1rem;
+ border-radius: 8px;
+ margin-bottom: 1rem;
+ border: 1px solid #ffeaa7;
+}
+
+.participantNote p {
+ margin: 0.25rem 0;
+ color: #856404;
+ font-size: 0.9rem;
+}
+
+/* チェックボックススタイル */
+.checkbox {
+ display: flex;
+ align-items: center;
+ margin-bottom: 0.5rem;
+}
+
+.checkbox input[type="checkbox"] {
+ margin-right: 0.5rem;
+ transform: scale(1.2);
+ accent-color: #007bff;
+}
+
+.checkbox label {
+ margin: 0;
+ font-weight: normal;
+ cursor: pointer;
+ font-size: 0.95rem;
+}
+
+/* レスポンシブデザイン */
+@media (max-width: 768px) {
+ .container {
+   padding: 0;
+ }
+
+ .header {
+   padding: 1.5rem 1rem;
+ }
+
+ .header h1 {
+   font-size: 1.4rem;
+ }
+
+ .content {
+   padding: 1rem;
+ }
+
+ .form {
+   padding: 1.5rem;
+   border-radius: 12px;
+ }
+
+ .section h2 {
+   font-size: 1.1rem;
+ }
+
+ .timeSlotOption {
+   padding: 12px;
+ }
+
+ .timeSlotLabel {
+   font-size: 14px;
+ }
+
+ .timeSlotCapacity {
+   font-size: 12px;
+ }
+
+ .buttons {
+   flex-direction: column;
+   gap: 0.75rem;
+ }
+
+ .backButton,
+ .submitButton {
+   width: 100%;
+ }
+
+ .participantGroup {
+   padding: 1rem;
+ }
+
+ .capacityInfo {
+   padding: 1rem;
+ }
+}
+
+@media (max-width: 480px) {
+ .header {
+   padding: 1rem 0.75rem;
+ }
+
+ .header h1 {
+   font-size: 1.2rem;
+ }
+
+ .content {
+   padding: 0.75rem;
+ }
+
+ .form {
+   padding: 1rem;
+ }
+
+ .section {
+   margin-bottom: 1.5rem;
+ }
+
+ .fieldGroup {
+   margin-bottom: 1rem;
+ }
+
+ .input,
+ .textarea,
+ .select {
+   padding: 0.6rem;
+   font-size: 0.95rem;
+ }
+
+ .timeSlotOption {
+   padding: 10px;
+ }
+
+ .timeSlotLabel {
+   font-size: 13px;
+ }
+
+ .fullBadge,
+ .lowBadge {
+   top: 6px;
+   right: 8px;
+   padding: 2px 6px;
+   font-size: 10px;
+ }
+}
+
+/* アニメーション */
+@keyframes pulse {
+ 0%, 100% { 
+   opacity: 0.7; 
+   transform: scale(1); 
+ }
+ 50% { 
+   opacity: 1; 
+   transform: scale(1.05); 
+ }
+}
+
+@keyframes fadeIn {
+ from {
+   opacity: 0;
+   transform: translateY(10px);
+ }
+ to {
+   opacity: 1;
+   transform: translateY(0);
+ }
+}
+
+.section {
+ animation: fadeIn 0.6s ease-out;
+}
+
+.timeSlotOption {
+ animation: fadeIn 0.4s ease-out;
+}
+
+/* フォーカス時のアクセシビリティ向上 */
+.timeSlotOption:focus-within {
+ outline: 2px solid #007bff;
+ outline-offset: 2px;
+}
+
+.input:focus,
+.textarea:focus,
+.select:focus {
+ outline: none;
+ border-color: #007bff;
+ box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+/* プリント用スタイル */
+@media print {
+ .header {
+   background: white !important;
+   color: black !important;
+ }
+
+ .buttons {
+   display: none;
+ }
+
+ .form {
+   box-shadow: none;
+   border: 1px solid #ddd;
+ }
+}
+
+/* ダークモード対応（将来的な拡張用） */
+@media (prefers-color-scheme: dark) {
+ .container {
+   background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+ }
+
+ .form {
+   background: #333;
+   color: #fff;
+ }
+
+ .input,
+ .textarea,
+ .select {
+   background: #444;
+   color: #fff;
+   border-color: #555;
+ }
+
+ .timeSlotOption {
+   background: #444;
+   border-color: #555;
+ }
+
+ .timeSlotOption:hover:not(.fullSlot) {
+   background: #555;
+ }
 }
