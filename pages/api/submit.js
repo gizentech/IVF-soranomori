@@ -161,6 +161,105 @@ async function sendEmail(emailData) {
   }
 }
 
+// Slack通知関数（統一版）
+async function sendSlackNotificationForSubmit(eventType, uniqueId, data) {
+  console.log('\n' + '🔔'.repeat(50))
+  console.log('🔔 SUBMIT API - Slack通知処理開始')
+  console.log('🔔 Event Type:', eventType)
+  console.log('🔔 Unique ID:', uniqueId)
+  console.log('🔔 処理時刻:', new Date().toISOString())
+  console.log('🔔'.repeat(50))
+
+  try {
+    // 環境変数の確認
+    const webhookUrl = process.env.SLACK_WEBHOOK_URL
+    console.log('🔔 環境変数確認:')
+    console.log('🔔   Webhook URL exists:', !!webhookUrl)
+    console.log('🔔   Webhook URL length:', webhookUrl?.length || 0)
+    
+    if (!webhookUrl) {
+      console.error('🔔 ❌ SLACK_WEBHOOK_URL not found in submit API')
+      return { success: false, error: 'Webhook URL not configured' }
+    }
+    
+    // Slack関数をインポート
+    console.log('🔔 Slack通知関数をインポート中...')
+    const { sendSlackNotification } = await import('../../lib/slack')
+    console.log('🔔 ✅ sendSlackNotification imported:', typeof sendSlackNotification)
+    
+    // 通知データを準備
+    console.log('🔔 通知データ準備中...')
+    let notificationData = {
+      eventType,
+      uniqueId,
+      email: data.email || 'メール不明'
+    }
+
+    // イベント別データ設定
+    if (eventType === 'golf') {
+      notificationData = {
+        ...notificationData,
+        representativeName: data.representativeName || '',
+        lastName: '', // ゴルフの場合は代表者名を使用
+        firstName: '',
+        organization: data.companyName || data.organization || '所属不明',
+        totalParticipants: data.totalParticipants || 1
+      }
+      console.log('🔔 🏌️ Golf event notification data prepared')
+    } else if (eventType === 'ivf') {
+      notificationData = {
+        ...notificationData,
+        lastName: data.lastName || '',
+        firstName: data.firstName || '',
+        organization: data.organization || '所属不明',
+        selectedTimeSlot: data.selectedTimeSlot || '時間帯不明'
+      }
+      console.log('🔔 🔬 IVF event notification data prepared')
+    } else if (eventType === 'nursing') {
+      notificationData = {
+        ...notificationData,
+        lastName: data.lastName || '',
+        firstName: data.firstName || '',
+        organization: data.organization || '所属不明'
+      }
+      console.log('🔔 🏥 Nursing event notification data prepared')
+    }
+
+    console.log('🔔 📊 最終通知データ:')
+    console.log(JSON.stringify(notificationData, null, 2))
+    
+    // Slack通知実行
+    console.log('🔔 📤 sendSlackNotification実行中...')
+    const slackStartTime = Date.now()
+    
+    const slackResult = await sendSlackNotification(notificationData, 'registration')
+    
+    const slackDuration = Date.now() - slackStartTime
+    console.log('🔔 📬 sendSlackNotification完了 (' + slackDuration + 'ms)')
+    console.log('🔔 📊 結果:', JSON.stringify(slackResult, null, 2))
+    
+    if (slackResult.success) {
+      console.log('🔔 ✅ Slack通知送信成功！')
+    } else {
+      console.error('🔔 ❌ Slack通知送信失敗:', slackResult.error)
+    }
+    
+    return slackResult
+    
+  } catch (slackError) {
+    console.error('\n🔔 ❌ Slack通知処理でエラー発生:')
+    console.error('🔔   エラー名:', slackError.name)
+    console.error('🔔   エラーメッセージ:', slackError.message)
+    console.error('🔔   スタック:', slackError.stack)
+    
+    return { success: false, error: slackError.message }
+  } finally {
+    console.log('🔔'.repeat(50))
+    console.log('🔔 SUBMIT API - Slack通知処理終了')
+    console.log('🔔'.repeat(50) + '\n')
+  }
+}
+
 export default async function handler(req, res) {
   console.log('=== Submit API Called ===')
   console.log('Method:', req.method)
@@ -269,19 +368,22 @@ export default async function handler(req, res) {
         eventType
       })
 
-      // Slack通知
-      try {
-        await sendSlackNotification({
-          eventType,
-          uniqueId,
-          lastName: data.lastName,
-          firstName: data.firstName,
-          email: data.email,
-          organization: data.organization,
-          selectedTimeSlot: data.selectedTimeSlot
-        }, 'registration')
-      } catch (slackError) {
-        console.error('Slack notification failed:', slackError)
+      // Slack通知（IVF用）
+      console.log('📍 IVF用Slack通知を実行します')
+      const slackResult = await sendSlackNotificationForSubmit(eventType, uniqueId, data)
+
+      // 定員アラートチェック（IVF用）
+      const newRemainingSlots = maxEntries - currentCount - 1
+      const capacityRatio = (currentCount + 1) / maxEntries
+
+      if (capacityRatio >= 0.8) {
+        try {
+          console.log('Sending IVF capacity alert...')
+          await sendCapacityAlert(eventType, currentCount + 1, maxEntries)
+          console.log('✅ IVF Capacity alert sent')
+        } catch (alertError) {
+          console.error('❌ IVF Capacity alert failed:', alertError)
+        }
       }
 
       return res.status(200).json({
@@ -289,9 +391,10 @@ export default async function handler(req, res) {
         uniqueId,
         status: 'confirmed',
         message: 'お申し込みが完了しました',
-        remainingSlots: maxEntries - currentCount - 1,
+        remainingSlots: newRemainingSlots,
         timeSlot: selectedTimeSlot,
         emailSent: emailResult.success,
+        slackSent: slackResult.success,
         timestamp: new Date().toISOString()
       })
 
@@ -456,23 +559,9 @@ export default async function handler(req, res) {
         console.error('Email sending failed:', emailResult.error)
       }
 
-      // Slack通知を送信
-      try {
-        const slackResult = await sendSlackNotification({
-          eventType,
-          uniqueId,
-          lastName: data.lastName || data.representativeName,
-          firstName: data.firstName || '',
-          email: data.email,
-          organization: data.organization || data.companyName,
-          totalParticipants: data.totalParticipants,
-          representativeName: data.representativeName
-        }, 'registration')
-        
-        console.log('Slack notification result:', slackResult)
-      } catch (slackException) {
-        console.error('Slack notification exception:', slackException)
-      }
+      // Slack通知を送信（nursing/golf用）
+      console.log(`📍 ${eventType}用Slack通知を実行します`)
+      const slackResult = await sendSlackNotificationForSubmit(eventType, uniqueId, data)
 
       // 定員アラートチェック
       const finalCurrentCount = currentCount + requestedSlots
@@ -481,11 +570,17 @@ export default async function handler(req, res) {
 
       if (capacityRatio >= 0.8) {
         try {
-          console.log('Sending capacity alert...')
-          await sendCapacityAlert(eventType, finalCurrentCount, maxEntries)
-          console.log('✅ Capacity alert sent')
+          console.log(`Sending ${eventType} capacity alert...`)
+          const capacityAlertResult = await sendCapacityAlert(eventType, finalCurrentCount, maxEntries)
+          console.log(`Capacity alert result for ${eventType}:`, capacityAlertResult)
+          
+          if (capacityAlertResult.success) {
+            console.log(`✅ ${eventType} capacity alert sent`)
+          } else {
+            console.error(`❌ ${eventType} capacity alert failed:`, capacityAlertResult.error)
+          }
         } catch (alertError) {
-          console.error('Capacity alert failed:', alertError)
+          console.error(`❌ ${eventType} capacity alert exception:`, alertError)
         }
       }
 
@@ -497,6 +592,7 @@ export default async function handler(req, res) {
         remainingSlots: finalRemainingSlots,
         emailSent,
         emailError,
+        slackSent: slackResult.success,
         savedDocuments,
         timestamp: new Date().toISOString()
       }
@@ -508,6 +604,29 @@ export default async function handler(req, res) {
   } catch (error) {
     console.error('Submit API error:', error)
     console.error('Error stack:', error.stack)
+    
+    // エラー時もSlack通知を試行
+    try {
+      const errorNotification = {
+        text: `❌ 予約システムエラー発生\n` +
+              `時刻: ${new Date().toLocaleString('ja-JP', { timeZone: 'Asia/Tokyo' })}\n` +
+              `エラー: ${error.message}\n` +
+              `スタック: ${error.stack?.substring(0, 200) || 'スタック情報なし'}`
+      }
+      
+      const webhookUrl = process.env.SLACK_WEBHOOK_URL
+      if (webhookUrl) {
+        await fetch(webhookUrl, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(errorNotification)
+        })
+        console.log('Error notification sent to Slack')
+      }
+    } catch (errorSlackException) {
+      console.error('❌ Error notification to Slack also failed:', errorSlackException)
+    }
+    
     return res.status(500).json({
       error: 'Internal server error',
       message: error.message,

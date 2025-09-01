@@ -189,6 +189,10 @@ export default function GolfApplicationForm({ onSubmit, onBack, initialData = {}
   }
 
   const handleSubmit = async (e) => {
+    console.log('🔍 GolfApplicationForm - handleSubmit called')
+    console.log('🔍 Form data before validation:', formData)
+    console.log('🔍 Participants:', participants)
+    
     e.preventDefault()
     
     setLoading(true)
@@ -197,21 +201,27 @@ export default function GolfApplicationForm({ onSubmit, onBack, initialData = {}
     await new Promise(resolve => setTimeout(resolve, 1000))
     
     const totalParticipants = calculateTotalParticipants()
+    console.log('🔍 Total participants calculated:', totalParticipants)
+    console.log('🔍 Remaining slots:', capacityInfo.remainingSlots)
     
     // 定員に達している場合の処理
     if (capacityInfo.remainingSlots === 0) {
+      console.log('🔍 Golf - Capacity full, cannot register')
       alert('定員に達しました。現在申し込みを受け付けておりません。')
       setLoading(false)
       return
     }
     
     if (totalParticipants > capacityInfo.remainingSlots) {
+      console.log('🔍 Golf - Total participants exceeds remaining slots')
       alert(`申し込み可能人数は残り${capacityInfo.remainingSlots}名です。現在の申し込み人数: ${totalParticipants}名`)
       setLoading(false)
       return
     }
     
     if (validateForm()) {
+      console.log('🔍 GolfApplicationForm - Form validation passed')
+      
       // 有効な参加者のみをフィルタリング
       const validParticipants = participants.filter(p => p.name.trim()).map((participant, index) => ({
         name: participant.name,
@@ -232,8 +242,11 @@ export default function GolfApplicationForm({ onSubmit, onBack, initialData = {}
         specialRequests: formData.remarks
       }
       
-      console.log('Submission data:', submissionData) // デバッグ用
+      console.log('🔍 GolfApplicationForm - Calling onSubmit with data:', submissionData)
       onSubmit(submissionData)
+    } else {
+      console.log('🔍 GolfApplicationForm - Form validation failed')
+      console.log('🔍 Validation errors:', errors)
     }
     setLoading(false)
   }

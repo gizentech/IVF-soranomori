@@ -26,31 +26,46 @@ export default function IVFTour() {
   }
 
   const handleConfirmation = async (data) => {
+    console.log('🔍 IVF - handleConfirmation called')
+    console.log('🔍 Data to submit:', data)
+    
     try {
+      const requestData = {
+        ...data,
+        eventType: 'ivf'
+      }
+      
+      console.log('🔍 IVF Request data with eventType:', requestData)
+      console.log('🔍 IVF Making POST request to /api/submit')
+      
       const response = await fetch('/api/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...data,
-          eventType: 'ivf'
-        }),
+        body: JSON.stringify(requestData),
       })
 
+      console.log('🔍 IVF Submit API response status:', response.status)
+      console.log('🔍 IVF Submit API response ok:', response.ok)
+      
       const result = await response.json()
+      console.log('🔍 IVF Submit API result:', result)
       
       if (response.ok && result.success) {
+        console.log('🔍 IVF submission successful!')
         setUniqueId(result.uniqueId)
         setCurrentPage('completion')
       } else if (!response.ok && result.status === 'full_capacity') {
+        console.log('🔍 IVF capacity full')
         alert('選択された時間帯は満員です。他の時間帯をお選びください。')
         setCurrentPage('application')
       } else {
+        console.log('🔍 IVF submission failed:', result)
         alert(`エラーが発生しました: ${result.message || result.error || 'もう一度お試しください。'}`)
       }
     } catch (error) {
-      console.error('Network error:', error)
+      console.error('🔍 IVF Submit error:', error)
       alert('ネットワークエラーが発生しました。')
     }
   }

@@ -37,31 +37,46 @@ export default function NursingTour() {
   }
 
   const handleConfirmation = async (data) => {
+    console.log('🔍 Nursing - handleConfirmation called')
+    console.log('🔍 Data to submit:', data)
+    
     try {
+      const requestData = {
+        ...data,
+        eventType: eventConfig.type // 'nursing'
+      }
+      
+      console.log('🔍 Request data with eventType:', requestData)
+      console.log('🔍 Making POST request to /api/submit')
+      
       const response = await fetch('/api/submit', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          ...data,
-          eventType: eventConfig.type
-        }),
+        body: JSON.stringify(requestData),
       })
 
+      console.log('🔍 Nursing Submit API response status:', response.status)
+      console.log('🔍 Nursing Submit API response ok:', response.ok)
+      
       const result = await response.json()
+      console.log('🔍 Nursing Submit API result:', result)
       
       if (response.ok && result.success) {
+        console.log('🔍 Nursing submission successful!')
         setUniqueId(result.uniqueId)
         setCurrentPage('completion')
       } else if (!response.ok && result.status === 'full_capacity') {
+        console.log('🔍 Nursing capacity full')
         alert('ご予約満員御礼につき、ご予約がお取りできませんでした。')
         handleHome()
       } else {
+        console.log('🔍 Nursing submission failed:', result)
         alert(`エラーが発生しました: ${result.message || result.error || 'もう一度お試しください。'}`)
       }
     } catch (error) {
-      console.error('Network error:', error)
+      console.error('🔍 Nursing Submit error:', error)
       alert('ネットワークエラーが発生しました。')
     }
   }

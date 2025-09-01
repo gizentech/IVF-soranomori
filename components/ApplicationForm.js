@@ -7,7 +7,6 @@ export default function ApplicationForm({ onSubmit, onBack, initialData = {} }) 
   const [formData, setFormData] = useState(initialData)
   const [errors, setErrors] = useState({})
 
-  // 以下は既存のコードと同じ...
   const handleInputChange = (name, value) => {
     setFormData(prev => ({
       ...prev,
@@ -45,9 +44,17 @@ export default function ApplicationForm({ onSubmit, onBack, initialData = {} }) 
   }
 
   const handleSubmit = (e) => {
+    console.log('🔍 ApplicationForm (Nursing) - handleSubmit called')
+    console.log('🔍 Form data before validation:', formData)
+    
     e.preventDefault()
     if (validateForm()) {
+      console.log('🔍 ApplicationForm (Nursing) - Form validation passed')
+      console.log('🔍 Calling onSubmit with data:', formData)
       onSubmit(formData)
+    } else {
+      console.log('🔍 ApplicationForm (Nursing) - Form validation failed')
+      console.log('🔍 Validation errors:', errors)
     }
   }
 

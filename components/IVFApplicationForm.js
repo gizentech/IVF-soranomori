@@ -133,9 +133,17 @@ export default function IVFApplicationForm({ onSubmit, onBack, initialData = {} 
   }
 
   const handleSubmit = (e) => {
+    console.log('🔍 IVFApplicationForm - handleSubmit called')
+    console.log('🔍 Form data before validation:', formData)
+    
     e.preventDefault()
     if (validateForm()) {
+      console.log('🔍 IVFApplicationForm - Form validation passed')
+      console.log('🔍 Calling onSubmit with data:', formData)
       onSubmit(formData)
+    } else {
+      console.log('🔍 IVFApplicationForm - Form validation failed')
+      console.log('🔍 Validation errors:', errors)
     }
   }
 
